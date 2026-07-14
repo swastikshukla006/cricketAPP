@@ -640,30 +640,3 @@
     console.error('Application startup failed:', error);
   });
 })();
-const API_URL = "/api/state";
-
-async function loadDatabaseData() {
-  const response = await fetch(API_URL);
-
-  if (!response.ok) {
-    throw new Error("Could not load team data");
-  }
-
-  return await response.json();
-}
-
-async function saveDatabaseData(teamData) {
-  const response = await fetch(API_URL, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(teamData)
-  });
-
-  if (!response.ok) {
-    throw new Error("Could not save team data");
-  }
-
-  return await response.json();
-}
