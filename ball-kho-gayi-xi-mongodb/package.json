@@ -1,0 +1,9 @@
+{
+  "name": "ball-kho-gayi-xi",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "mongodb": "^6.0.0"
+  }
+}
