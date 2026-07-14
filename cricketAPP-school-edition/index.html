@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#07110e" />
+  <meta name="description" content="A school cricket team website for recording matches later, managing players, tosses, scorecards and season statistics." />
+  <title>Cricket Circle — School Cricket HQ</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a href="#home" class="brand" aria-label="Go to homepage">
+      <span class="brand-mark">C</span>
+      <span>
+        <strong id="brandName">Cricket Circle</strong>
+        <small>School cricket headquarters</small>
+      </span>
+    </a>
+
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <a href="#matches">Matches</a>
+      <a href="#post-match">Add Result</a>
+      <a href="#toss">Toss</a>
+      <a href="#players">Players</a>
+      <a href="#stats">Stats</a>
+      <a href="#admin">Admin</a>
+    </nav>
+
+    <div class="header-actions">
+      <span class="admin-chip"><i></i> Admin: Swastik</span>
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle theme">☾</button>
+    </div>
+  </header>
+
+  <main id="home">
+    <section class="hero section-shell">
+      <div class="hero-copy">
+        <p class="eyebrow">Offline-first · Built for school cricket groups</p>
+        <h1>Play at school. Record it properly at home.</h1>
+        <p class="hero-text">
+          No phone needed during the match. Keep the score on paper, return home, and upload the full result, toss and every player’s performance in one place.
+        </p>
+        <div class="hero-actions">
+          <a class="primary-btn" href="#post-match">Upload Today’s Match</a>
+          <a class="secondary-btn" href="#players">Open Team Roster</a>
+        </div>
+        <div class="mini-stats">
+          <span><b id="heroPlayers">0</b> active players</span>
+          <span><b id="heroMatches">0</b> matches recorded</span>
+          <span><b id="heroRuns">0</b> team runs logged</span>
+        </div>
+      </div>
+
+      <div class="hero-card">
+        <img src="assets/hero-trophy.png" alt="Cricketer holding a trophy with the Indian flag" />
+        <div class="live-chip">SCHOOL MODE</div>
+        <div class="glass-score">
+          <span>Next Fixture</span>
+          <strong id="nextMatchTitle">No fixture scheduled</strong>
+          <small id="nextMatchMeta">Use the Match Center to add one</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="ticker" aria-label="Website features">
+      <span>POST-MATCH ENTRY</span><span>PLAYER PROFILES</span><span>TOSS ROOM</span><span>SCORECARDS</span><span>SEASON STATS</span><span>OFFLINE STORAGE</span>
+    </section>
+
+    <section class="section-shell school-mode">
+      <article class="school-note panel">
+        <div class="note-icon">✎</div>
+        <div>
+          <p class="eyebrow">Designed for your routine</p>
+          <h2>Paper at school. Digital scorecard later.</h2>
+          <p>Write team scores and individual performances in a notebook. At home, open this website and enter them in the Post-Match Desk. The leaderboard updates automatically.</p>
+        </div>
+        <a class="primary-btn small" href="#post-match">Open Desk</a>
+      </article>
+    </section>
+
+    <section class="section-shell leadership-section">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Team Leadership</p>
+          <h2>The people in charge</h2>
+        </div>
+        <a href="#admin" class="text-link">Manage leadership →</a>
+      </div>
+      <div class="leadership-grid">
+        <article class="leader-card admin-leader">
+          <span class="leader-index">01</span>
+          <p>Administrator & Developer</p>
+          <h3>Swastik Shukla</h3>
+          <small>Full website control</small>
+        </article>
+        <article class="leader-card">
+          <span class="leader-index">02</span>
+          <p>Captain</p>
+          <h3 id="captainName">Not assigned</h3>
+          <small>Choose from the Admin panel</small>
+        </article>
+        <article class="leader-card">
+          <span class="leader-index">03</span>
+          <p>Vice-Captain</p>
+          <h3 id="viceCaptainName">Not assigned</h3>
+          <small>Choose from the Admin panel</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="section-shell dashboard-grid">
+      <article class="panel season-panel">
+        <div class="section-head compact">
+          <div><p class="eyebrow">Season Dashboard</p><h2>Team at a glance</h2></div>
+        </div>
+        <div class="dashboard-cards">
+          <div><span>Record</span><strong id="seasonRecord">0W · 0L</strong><small>Completed matches</small></div>
+          <div><span>Top Batter</span><strong id="topBatter">—</strong><small id="topBatterStat">0 runs</small></div>
+          <div><span>Top Bowler</span><strong id="topBowler">—</strong><small id="topBowlerStat">0 wickets</small></div>
+          <div><span>Best Fielder</span><strong id="topFielder">—</strong><small id="topFielderStat">0 catches</small></div>
+        </div>
+      </article>
+      <article class="panel announcement-card">
+        <p class="eyebrow">Captain’s Board</p>
+        <h3 id="announcementTitle">Carry the score notebook.</h3>
+        <p id="announcementText">Record runs, balls, wickets, overs and catches so the match can be uploaded accurately later.</p>
+        <button class="secondary-btn small" id="editNoticeBtn" type="button">Edit Notice</button>
+      </article>
+    </section>
+
+    <section id="matches" class="section-shell">
+      <div class="section-head">
+        <div><p class="eyebrow">Match Center</p><h2>Fixtures and scorecards</h2></div>
+        <div class="section-actions">
+          <button class="secondary-btn small" id="scheduleBtn" type="button">Schedule Match</button>
+          <button class="primary-btn small" id="quickResultBtn" type="button">Add Completed Match</button>
+        </div>
+      </div>
+      <div class="match-filter-row" role="group" aria-label="Filter matches">
+        <button class="filter-chip active" data-match-filter="all" type="button">All</button>
+        <button class="filter-chip" data-match-filter="Upcoming" type="button">Upcoming</button>
+        <button class="filter-chip" data-match-filter="Completed" type="button">Completed</button>
+      </div>
+      <div class="match-grid" id="matchGrid"></div>
+      <div class="empty-state hidden" id="matchEmpty"><span>🏏</span><h3>No matches here yet</h3><p>Add a fixture or upload a completed match.</p></div>
+    </section>
+
+    <section id="post-match" class="section-shell post-match-section">
+      <div class="post-match-copy">
+        <p class="eyebrow">Post-Match Desk</p>
+        <h2>Upload the match after school.</h2>
+        <p>Enter the final scores, toss and player performances from your paper notebook. Nothing needs to be entered live.</p>
+        <ul class="check-list">
+          <li>Records the toss and innings order</li>
+          <li>Creates a permanent match scorecard</li>
+          <li>Updates every player’s profile</li>
+          <li>Recalculates runs, wickets, catches, strike rate and economy</li>
+        </ul>
+      </div>
+      <article class="upload-card panel">
+        <div class="upload-number">+1</div>
+        <h3>Ready with the notebook?</h3>
+        <p>It usually takes two to five minutes to enter a complete match.</p>
+        <button class="primary-btn wide" id="openResultDeskBtn" type="button">Start Match Entry</button>
+        <small>Saved privately in this browser. Export backups from Admin.</small>
+      </article>
+    </section>
+
+    <section id="toss" class="section-shell toss-section">
+      <div class="section-head">
+        <div><p class="eyebrow">Toss Room</p><h2>Flip it before the match</h2></div>
+        <p class="section-caption">Use this when a phone is available, or record the real toss later in the match form.</p>
+      </div>
+      <div class="toss-layout">
+        <article class="panel toss-controls">
+          <label>Opponent
+            <input id="tossOpponent" placeholder="e.g. Blue House XI" />
+          </label>
+          <label>Our call
+            <select id="tossCall"><option value="Heads">Heads</option><option value="Tails">Tails</option></select>
+          </label>
+          <button class="primary-btn wide" id="flipCoinBtn" type="button">Flip Coin</button>
+          <div class="decision-buttons hidden" id="decisionButtons">
+            <p id="tossWinnerText"></p>
+            <button class="secondary-btn small" data-decision="Bat" type="button">Bat First</button>
+            <button class="secondary-btn small" data-decision="Bowl" type="button">Bowl First</button>
+          </div>
+        </article>
+        <article class="coin-stage panel" aria-live="polite">
+          <div class="coin" id="coin"><div class="coin-face heads">H</div><div class="coin-face tails">T</div></div>
+          <p class="coin-label" id="coinLabel">Choose your call and flip</p>
+          <div class="saved-toss" id="savedToss">No toss saved yet</div>
+        </article>
+      </div>
+    </section>
+
+    <section id="players" class="section-shell">
+      <div class="section-head">
+        <div><p class="eyebrow">Squad Room</p><h2>Player profiles</h2></div>
+        <div class="section-actions">
+          <input class="search-input" id="playerSearch" type="search" placeholder="Search player" />
+          <button class="primary-btn small" id="addPlayerBtn" type="button">Add Player</button>
+        </div>
+      </div>
+      <div class="role-filters" role="group" aria-label="Filter players by role">
+        <button class="filter-chip active" data-role-filter="all" type="button">All</button>
+        <button class="filter-chip" data-role-filter="Batter" type="button">Batters</button>
+        <button class="filter-chip" data-role-filter="Bowler" type="button">Bowlers</button>
+        <button class="filter-chip" data-role-filter="All-rounder" type="button">All-rounders</button>
+        <button class="filter-chip" data-role-filter="Wicketkeeper" type="button">Keepers</button>
+      </div>
+      <div class="player-grid" id="playerGrid"></div>
+      <div class="empty-state hidden" id="playerEmpty"><span>👤</span><h3>No matching players</h3><p>Try another search or add a new player.</p></div>
+    </section>
+
+    <section id="stats" class="section-shell stats-section">
+      <div class="section-head">
+        <div><p class="eyebrow">Statistics Lab</p><h2>Season leaderboards</h2></div>
+        <div class="stat-tabs" role="tablist">
+          <button class="stat-tab active" data-stat="runs" type="button">Runs</button>
+          <button class="stat-tab" data-stat="wickets" type="button">Wickets</button>
+          <button class="stat-tab" data-stat="catches" type="button">Catches</button>
+          <button class="stat-tab" data-stat="strikeRate" type="button">Strike Rate</button>
+          <button class="stat-tab" data-stat="economy" type="button">Economy</button>
+        </div>
+      </div>
+      <div class="stats-layout">
+        <article class="panel podium-panel" id="podium"></article>
+        <article class="panel leaderboard-panel">
+          <div class="table-wrap">
+            <table>
+              <thead id="leaderHead"></thead>
+              <tbody id="leaderRows"></tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section-shell feature-section">
+      <div class="section-head"><div><p class="eyebrow">Built In</p><h2>Useful cricket tools</h2></div></div>
+      <div class="feature-grid">
+        <article><span>01</span><h3>Delayed scoring</h3><p>Enter the entire match at home instead of carrying a phone to school.</p></article>
+        <article><span>02</span><h3>Automatic stats</h3><p>Player totals are calculated from saved match performances, not typed twice.</p></article>
+        <article><span>03</span><h3>Toss room</h3><p>Animated heads-or-tails flip with winner and bat-or-bowl decision.</p></article>
+        <article><span>04</span><h3>Leadership</h3><p>Assign the captain and vice-captain directly from the current squad.</p></article>
+        <article><span>05</span><h3>Scorebook backup</h3><p>Export all team data as JSON and import it again on another device.</p></article>
+        <article><span>06</span><h3>Installable website</h3><p>PWA files are included so this can later become an app-like install.</p></article>
+      </div>
+    </section>
+
+    <section id="thankyou" class="thankyou section-shell">
+      <div class="thank-copy">
+        <p class="eyebrow">Thank You, Cricket</p>
+        <h2>For making ordinary school days unforgettable.</h2>
+        <p>Every run, wicket, argument, comeback and last-over finish deserves to be remembered. This scorebook is for the group that keeps showing up.</p>
+        <a href="#home" class="primary-btn">Back to Home</a>
+      </div>
+      <img src="assets/thank-you-kohli.png" alt="Thank you Virat Kohli cricket poster" />
+    </section>
+
+    <section id="admin" class="section-shell admin-section">
+      <div class="admin-banner panel">
+        <div>
+          <p class="eyebrow">Administrator</p>
+          <h2>Swastik Shukla</h2>
+          <p>Website owner, data manager and developer.</p>
+        </div>
+        <div class="contact-pills">
+          <a href="https://www.instagram.com/swastik_shukla__/" target="_blank" rel="noreferrer">Instagram · @swastik_shukla__</a>
+          <a href="mailto:jiking847@gmail.com">jiking847@gmail.com</a>
+        </div>
+      </div>
+
+      <div class="admin-grid">
+        <article class="panel admin-card">
+          <p class="eyebrow">Team Settings</p>
+          <label>Group name<input id="groupNameInput" maxlength="40" /></label>
+          <label>Captain<select id="captainSelect"></select></label>
+          <label>Vice-captain<select id="viceCaptainSelect"></select></label>
+          <button class="primary-btn wide" id="saveSettingsBtn" type="button">Save Team Settings</button>
+        </article>
+
+        <article class="panel admin-card">
+          <p class="eyebrow">Data Backup</p>
+          <h3>Protect your scorebook</h3>
+          <p>Export a backup before changing phones or browsers. Importing a backup restores players, matches and settings.</p>
+          <div class="stack-actions">
+            <button class="secondary-btn wide" id="exportBtn" type="button">Export JSON Backup</button>
+            <label class="file-btn">Import JSON Backup<input id="importInput" type="file" accept="application/json" /></label>
+          </div>
+        </article>
+
+        <article class="panel admin-card danger-card">
+          <p class="eyebrow">Maintenance</p>
+          <h3>Reset demo data</h3>
+          <p>This removes local changes and reloads the original sample roster and matches.</p>
+          <button class="danger-btn wide" id="resetBtn" type="button">Reset Website Data</button>
+        </article>
+      </div>
+    </section>
+
+    <footer class="site-footer section-shell">
+      <div>
+        <strong id="footerBrand">Cricket Circle</strong>
+        <span>School Cricket HQ</span>
+      </div>
+      <p>Designed and developed by <strong>Swastik Shukla</strong>.</p>
+      <div class="footer-links"><a href="mailto:jiking847@gmail.com">Email</a><a href="https://www.instagram.com/swastik_shukla__/" target="_blank" rel="noreferrer">Instagram</a></div>
+    </footer>
+  </main>
+
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <a href="#home"><span>⌂</span>Home</a>
+    <a href="#matches"><span>▣</span>Matches</a>
+    <a href="#post-match" class="mobile-primary"><span>＋</span>Add</a>
+    <a href="#players"><span>♙</span>Players</a>
+    <a href="#stats"><span>↗</span>Stats</a>
+  </nav>
+
+  <!-- Schedule Match Modal -->
+  <div class="modal" id="scheduleModal" aria-hidden="true">
+    <div class="modal-box medium-modal">
+      <button class="close" data-close="scheduleModal" type="button" aria-label="Close">×</button>
+      <p class="eyebrow">New Fixture</p>
+      <h2>Schedule a match</h2>
+      <form id="scheduleForm" class="form-grid">
+        <label>Opponent<input id="scheduleOpponent" required placeholder="Blue House XI" /></label>
+        <label>Venue<input id="scheduleVenue" required placeholder="School Ground" /></label>
+        <label>Date<input id="scheduleDate" required type="date" /></label>
+        <label>Time<input id="scheduleTime" required type="time" /></label>
+        <label>Overs<input id="scheduleOvers" required type="number" min="1" max="50" value="10" /></label>
+        <label>Ball type<select id="scheduleBall"><option>Tennis</option><option>Leather</option><option>Rubber</option></select></label>
+        <label class="full-field">Notes<textarea id="scheduleNotes" rows="3" placeholder="Kit, reporting time or special rules"></textarea></label>
+        <button class="primary-btn full-field" type="submit">Save Fixture</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Player Modal -->
+  <div class="modal" id="playerModal" aria-hidden="true">
+    <div class="modal-box medium-modal">
+      <button class="close" data-close="playerModal" type="button" aria-label="Close">×</button>
+      <p class="eyebrow">Squad Manager</p>
+      <h2 id="playerModalTitle">Add player</h2>
+      <form id="playerForm" class="form-grid">
+        <input type="hidden" id="editingPlayerId" />
+        <label>Full name<input id="playerName" required maxlength="40" /></label>
+        <label>Jersey number<input id="playerJersey" type="number" min="0" max="999" required /></label>
+        <label>Primary role<select id="playerRole"><option>Batter</option><option>Bowler</option><option>All-rounder</option><option>Wicketkeeper</option></select></label>
+        <label>School class<input id="playerClass" placeholder="e.g. Class 10-B" /></label>
+        <label>Batting style<select id="playerBatting"><option>Right-hand bat</option><option>Left-hand bat</option></select></label>
+        <label>Bowling style<select id="playerBowling"><option>Does not bowl</option><option>Right-arm fast</option><option>Right-arm medium</option><option>Left-arm fast</option><option>Off spin</option><option>Leg spin</option><option>Left-arm orthodox</option></select></label>
+        <label class="full-field">Player note<textarea id="playerNote" rows="3" placeholder="Strengths, preferred batting position or nickname"></textarea></label>
+        <button class="primary-btn full-field" type="submit">Save Player</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Match Result Modal -->
+  <div class="modal" id="resultModal" aria-hidden="true">
+    <div class="modal-box large-modal">
+      <button class="close" data-close="resultModal" type="button" aria-label="Close">×</button>
+      <p class="eyebrow">Post-Match Desk</p>
+      <h2>Enter completed match</h2>
+      <form id="resultForm">
+        <div class="form-grid result-basics">
+          <label>Opponent<input id="resultOpponent" required placeholder="Blue House XI" /></label>
+          <label>Date<input id="resultDate" required type="date" /></label>
+          <label>Venue<input id="resultVenue" required placeholder="School Ground" /></label>
+          <label>Overs per side<input id="resultOvers" required type="number" min="1" max="50" value="10" /></label>
+          <label>Our score<input id="ourScore" required placeholder="86/5" /></label>
+          <label>Opponent score<input id="opponentScore" required placeholder="81/8" /></label>
+          <label>Toss winner<select id="resultTossWinner"><option>Our team</option><option>Opponent</option></select></label>
+          <label>Toss decision<select id="resultTossDecision"><option>Bat first</option><option>Bowl first</option></select></label>
+          <label>Match result<select id="resultOutcome"><option value="win">We won</option><option value="loss">We lost</option><option value="tie">Tie</option><option value="no-result">No result</option></select></label>
+          <label>Result summary<input id="resultSummary" required placeholder="Won by 5 runs" /></label>
+          <label class="full-field">Match notes<textarea id="resultNotes" rows="3" placeholder="Turning point, best moment or anything worth remembering"></textarea></label>
+        </div>
+
+        <div class="performance-section">
+          <div class="section-head compact">
+            <div><p class="eyebrow">Player Performance</p><h3>Copy from your paper scorebook</h3></div>
+            <small>Leave unused players blank</small>
+          </div>
+          <div class="performance-table-wrap">
+            <table class="performance-table">
+              <thead><tr><th>Player</th><th>Runs</th><th>Balls</th><th>Wickets</th><th>Overs</th><th>Runs conceded</th><th>Catches</th></tr></thead>
+              <tbody id="performanceRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <button class="primary-btn wide" type="submit">Save Match & Update Statistics</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scorecard Modal -->
+  <div class="modal" id="scorecardModal" aria-hidden="true">
+    <div class="modal-box large-modal scorecard-box">
+      <button class="close" data-close="scorecardModal" type="button" aria-label="Close">×</button>
+      <div id="scorecardContent"></div>
+    </div>
+  </div>
+
+  <!-- Player Detail Modal -->
+  <div class="modal" id="playerDetailModal" aria-hidden="true">
+    <div class="modal-box medium-modal">
+      <button class="close" data-close="playerDetailModal" type="button" aria-label="Close">×</button>
+      <div id="playerDetailContent"></div>
+    </div>
+  </div>
+
+  <!-- Notice Modal -->
+  <div class="modal" id="noticeModal" aria-hidden="true">
+    <div class="modal-box small-modal">
+      <button class="close" data-close="noticeModal" type="button" aria-label="Close">×</button>
+      <p class="eyebrow">Captain’s Board</p>
+      <h2>Edit notice</h2>
+      <form id="noticeForm">
+        <label>Heading<input id="noticeTitleInput" required /></label>
+        <label>Message<textarea id="noticeTextInput" rows="5" required></textarea></label>
+        <button class="primary-btn wide" type="submit">Save Notice</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="confirm-dialog" id="confirmDialog" aria-hidden="true">
+    <div class="confirm-box">
+      <h3 id="confirmTitle">Are you sure?</h3>
+      <p id="confirmText">This action cannot be undone.</p>
+      <div class="confirm-actions"><button class="secondary-btn small" id="confirmCancel" type="button">Cancel</button><button class="danger-btn small" id="confirmOk" type="button">Continue</button></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
