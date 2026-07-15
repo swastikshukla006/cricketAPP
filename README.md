@@ -1,22 +1,30 @@
-# Ball Kho Gayi XI — Major MongoDB Update
+# Ball Kho Gayi XI - Mobile Cricket App Website
 
-Keep Vercel Root Directory set to `ball-kho-gayi-xi-fixed-root` and replace the contents of that active folder with this package.
+Flat-root Vercel project with a static mobile-first frontend and MongoDB-backed Vercel Functions.
 
-## Added
-- New Cric Time image-led front page
-- Proper circular Ball Kho Gayi XI logo
-- Player join requests with chosen name, phone, jersey, PIN and profile photo
-- Player profile editing and compressed photo uploads
-- Ananya set as vice-captain during the v3 migration
-- Opponent team directory with editable players
-- Practice team maker and manual player movement
-- MongoDB-synced dressing room group chat
-- Admin-editable branding, leadership, hero image, logo, squad and PINs
-- MongoDB remains connected through `/api/state`
+## Included
 
-## Vercel environment variables
+- Player join, login, private PIN hashing, profile photo, phone, jersey and self-editable role
+- Captain and Ananya vice-captain leadership access
+- Live ball-by-ball scoring with undo, strike swap, extras, target, share and result-desk transfer
+- Post-match scorecards and automatic player statistics
+- Our team, editable opponent teams and temporary opponent players
+- Practice team maker, availability, toss room and MongoDB group chat
+- WhatsApp group link and downloadable player guide PDF
+- Admin-editable branding, leadership, players, opponents and links
+
+## Vercel
+
+Use these settings:
+
+- Root Directory: `./`
+- Framework Preset: Other
+- Build Command: automatic / empty
+- Output Directory: automatic (the included `vercel.json` serves `public`)
+
+Environment variables:
+
 - `MONGODB_URI`
 - `MONGODB_DB=ball_kho_gayi_xi`
 
-## Important prototype note
-PIN hashes are stored in the shared team state. This is suitable for a trusted school group, but a future secure production login should use dedicated server-side sessions and per-user database records.
+Push the whole folder contents to the repository root.

@@ -8,7 +8,7 @@
 
   const seedData = {
     settings: {
-      version: 3,
+      version: 4,
       groupName: 'Ball Kho Gayi XI',
       tagline: 'Bat · Ball · Repeat',
       heroTitle: 'Our ground. Our squad. Our story.',
@@ -22,7 +22,8 @@
       viceCaptainId: 'p5',
       announcementTitle: 'Score likhna mat bhoolna.',
       announcementText: 'Ball kho jaaye to bhi theek hai — notebook mein runs, wickets, overs aur catches zaroor likhna.',
-      savedToss: null
+      savedToss: null,
+      whatsappGroupUrl: 'https://chat.whatsapp.com/IHx3Ph3owBgFB0JYxm1vDp?s=cl&p=a&mlu=0&ilr=0&amv=2'
     },
     players: [
       makePlayer('p1', 'Priyanshu', 7, 'Batter', 'Right-hand bat', 'Part-time off spin', 'Top-order stroke player.'),
@@ -50,7 +51,8 @@
     opponentTeams: [],
     joinRequests: [],
     chat: [{ id: 'chat-welcome', senderId: 'p6', senderName: 'Swastik', senderRole: 'Captain', text: 'Welcome to the Ball Kho Gayi XI dressing room chat.', createdAt: new Date().toISOString() }],
-    practiceTeams: { nameA: 'Team Green', nameB: 'Team Gold', teamA: [], teamB: [], updatedAt: null }
+    practiceTeams: { nameA: 'Team Green', nameB: 'Team Gold', teamA: [], teamB: [], updatedAt: null },
+    liveScoring: defaultLiveScoring()
   };
 
   let data = migrateData(deepClone(seedData));
@@ -67,6 +69,9 @@
 
   function makePlayer(id, name, jersey, role, battingStyle, bowlingStyle, note) {
     return { id, name, jersey, role, className: 'School Squad', battingStyle, bowlingStyle, note, phone: '', photo: '', pinHash: DEFAULT_PLAYER_PIN_HASH, status: 'active' };
+  }
+  function defaultLiveScoring() {
+    return { active:false, completed:false, matchId:'', opponent:'', battingSide:'our', oversLimit:10, target:0, runs:0, wickets:0, legalBalls:0, extras:0, striker:'', nonStriker:'', bowler:'', batting:{}, deliveries:[], history:[], startedAt:null, updatedAt:null, updatedBy:'' };
   }
   function completedMatch(id, opponent, date, ourScore, opponentScore, outcome, resultSummary, performances) {
     return { id, status: 'Completed', opponent, opponentTeamId: '', venue: 'School Ground', date, time: '', overs: 10, ballType: 'Tennis', ourScore, opponentScore, tossWinner: outcome === 'win' ? 'Our team' : 'Opponent', tossDecision: 'Bat first', outcome, resultSummary, notes: '', performances, createdAt: Date.now() };
@@ -93,10 +98,9 @@
     migrated.joinRequests = Array.isArray(migrated.joinRequests) ? migrated.joinRequests : [];
     migrated.chat = Array.isArray(migrated.chat) ? migrated.chat.slice(-100) : deepClone(seedData.chat);
     migrated.practiceTeams = { ...deepClone(seedData.practiceTeams), ...(migrated.practiceTeams || {}) };
-    if (oldVersion < 3) {
-      if (migrated.players.some((p) => p.id === 'p5')) migrated.settings.viceCaptainId = 'p5';
-      migrated.settings.version = 3;
-    }
+    migrated.liveScoring = { ...defaultLiveScoring(), ...(migrated.liveScoring || {}), batting: { ...((migrated.liveScoring || {}).batting || {}) }, deliveries: Array.isArray(migrated.liveScoring?.deliveries) ? migrated.liveScoring.deliveries.slice(-36) : [], history: Array.isArray(migrated.liveScoring?.history) ? migrated.liveScoring.history.slice(-25) : [] };
+    if (oldVersion < 3 && migrated.players.some((p) => p.id === 'p5')) migrated.settings.viceCaptainId = 'p5';
+    if (oldVersion < 4) migrated.settings.version = 4;
     return migrated;
   }
 
@@ -166,7 +170,9 @@
   function getSessionPlayer() { if (session?.type === 'player') return data.players.find((p) => p.id === session.playerId) || null; if (session?.type === 'admin') return data.players.find((p) => p.id === data.settings.captainId) || null; return null; }
   function isAdmin() { return session?.type === 'admin'; }
   function isCaptain() { const p = getSessionPlayer(); return Boolean(p && p.id === data.settings.captainId); }
-  function canManage() { return isAdmin() || isCaptain(); }
+  function isViceCaptain() { const p = getSessionPlayer(); return Boolean(p && p.id === data.settings.viceCaptainId); }
+  function canManage() { return isAdmin() || isCaptain() || isViceCaptain(); }
+  function canScore() { return canManage(); }
   function leadershipLabel(id) { if (id === data.settings.captainId) return 'Captain'; if (id === data.settings.viceCaptainId) return 'Vice-Captain'; return data.players.find((p) => p.id === id)?.role || 'Player'; }
   function phoneVisible(player) { return isAdmin() || canManage() || session?.playerId === player.id; }
   function displayPhone(player) { if (!player.phone) return ''; if (phoneVisible(player)) return player.phone; const digits = player.phone.replace(/\D/g,''); return digits.length >= 4 ? `•••• ${digits.slice(-4)}` : 'Private'; }
@@ -192,7 +198,7 @@
   }
 
   function renderAll() {
-    renderBrand(); renderSummary(); renderLeadership(); renderAccount(); renderMatches(); renderTeams(); renderPractice(); renderChat(); renderToss(); renderStats(); renderAdmin(); renderLoginOptions(); renderPerformanceRows(); renderOpponentOptions(); applyPermissions();
+    renderBrand(); renderSummary(); renderLeadership(); renderAccount(); renderMatches(); renderLiveScoring(); renderTeams(); renderPractice(); renderChat(); renderToss(); renderStats(); renderAdmin(); renderLoginOptions(); renderPerformanceRows(); renderOpponentOptions(); applyPermissions();
   }
 
   function renderBrand() {
@@ -202,6 +208,7 @@
     const logo = safeImage(s.logoImage, 'assets/ball-kho-gayi-circle.png'); const hero = safeImage(s.heroImage, 'assets/cric-time-front.jpg');
     ['headerLogo','heroLogo','teamSectionLogo','footerLogo'].forEach((id) => { if ($(id)) $(id).src = logo; }); $('heroImage').src = hero;
     document.title = `${s.groupName} — School Cricket`;
+    ['chatWhatsappLink','thankWhatsappLink'].forEach((id)=>{if($(id))$(id).href=s.whatsappGroupUrl||'#';});
     const completed = data.matches.filter((m) => m.status === 'Completed'); const wins = completed.filter((m) => m.outcome === 'win').length;
     $('heroPlayers').textContent = activePlayers().length; $('heroMatches').textContent = completed.length; $('heroWins').textContent = wins; $('heroRuns').textContent = completed.reduce((sum,m) => sum + parseScore(m.ourScore), 0);
     const upcoming = getUpcomingMatch(); $('nextMatchTitle').textContent = upcoming ? `${s.groupName} vs ${upcoming.opponent}` : 'No match scheduled'; $('nextMatchMeta').textContent = upcoming ? `${formatDate(upcoming.date)} · ${upcoming.time || 'Time TBA'} · ${upcoming.venue}` : 'Captain or admin can add one';
@@ -225,7 +232,7 @@
     if (!session) { dashboard.classList.add('hidden'); $('loginBtn').classList.remove('hidden'); $('accountBtn').classList.add('hidden'); $('mobileAccountBtn').innerHTML = '◎<span>Account</span>'; return; }
     dashboard.classList.remove('hidden'); $('loginBtn').classList.add('hidden'); $('accountBtn').classList.remove('hidden'); $('mobileAccountBtn').innerHTML = '◎<span>My Room</span>';
     const player = getSessionPlayer(); const displayName = isAdmin() ? data.settings.adminName : player?.name || 'Player'; const role = isAdmin() ? 'Administrator' : leadershipLabel(player?.id);
-    $('accountAvatar').textContent = initials(displayName); $('accountName').textContent = displayName; $('accountRole').textContent = role; $('dashboardName').textContent = displayName; $('dashboardRole').textContent = role; $('dashboardGreeting').textContent = `Welcome back, ${displayName.split(' ')[0]}`; $('dashboardEyebrow').textContent = isAdmin() ? 'Administrator Dashboard' : isCaptain() ? 'Captain Dashboard' : 'My Dressing Room';
+    $('accountAvatar').textContent = initials(displayName); $('accountName').textContent = displayName; $('accountRole').textContent = role; $('dashboardName').textContent = displayName; $('dashboardRole').textContent = role; $('dashboardGreeting').textContent = `Welcome back, ${displayName.split(' ')[0]}`; $('dashboardEyebrow').textContent = isAdmin() ? 'Administrator Dashboard' : isCaptain() ? 'Captain Dashboard' : isViceCaptain() ? 'Vice-Captain Dashboard' : 'My Dressing Room';
     const photoBox = $('dashboardPhoto'); photoBox.innerHTML = player?.photo ? `<img src="${safeImage(player.photo)}" alt="${escapeHtml(displayName)}" />` : `<span id="dashboardAvatar">${initials(displayName)}</span>`;
     if (!player) { $('dashboardPlayerMeta').textContent = 'Website administration account'; $('dashboardPhone').textContent = ''; ['myMatches','myRuns','myWickets','myCatches'].forEach((id) => $(id).textContent = '—'); $('myStrikeRate').textContent = '—'; $('myEconomy').textContent = '—'; $('recentForm').innerHTML = '<p class="muted">No linked player profile.</p>'; renderCaptainDashboard(); return; }
     const stats = calculatePlayerStats(); const stat = stats.find((s) => s.player.id === player.id) || { matches:0,runs:0,wickets:0,catches:0,strikeRate:0,economy:0,ballsBowled:0 };
@@ -263,8 +270,51 @@
 
   function renderMatches() {
     let matches=[...data.matches].sort((a,b)=>a.status!==b.status?(a.status==='Upcoming'?-1:1):new Date(b.date)-new Date(a.date)); if(matchFilter!=='all')matches=matches.filter((m)=>m.status===matchFilter);
-    $('matchGrid').innerHTML=matches.map((match)=>{const completed=match.status==='Completed'; const opponentTeam=data.opponentTeams.find((t)=>t.id===match.opponentTeamId); return `<article class="match-card"><span class="match-status ${completed?'completed':''}">${escapeHtml(match.status)}</span><h3>${escapeHtml(data.settings.groupName)} vs ${escapeHtml(match.opponent)}</h3><p class="match-meta">${formatDate(match.date)}${match.time?` · ${escapeHtml(match.time)}`:''}<br>${escapeHtml(match.venue)} · ${match.overs} overs · ${escapeHtml(match.ballType||'Tennis')} ball${opponentTeam?`<br>${opponentTeam.players.length} opponent players listed`:''}</p><div class="score-strip"><div><small>Our team</small><strong>${completed?escapeHtml(match.ourScore):'—'}</strong></div><b>VS</b><div><small>${escapeHtml(match.opponent)}</small><strong>${completed?escapeHtml(match.opponentScore):'—'}</strong></div></div><p class="result-text">${completed?escapeHtml(match.resultSummary):escapeHtml(match.notes||'Fixture scheduled')}</p><div class="card-actions">${completed?`<button class="card-btn" data-scorecard="${match.id}">Scorecard</button>`:''}${!completed&&canManage()?`<button class="card-btn" data-complete-match="${match.id}">Add result</button>`:''}${isAdmin()?`<button class="card-btn danger-text" data-delete-match="${match.id}">Delete</button>`:''}</div></article>`;}).join(''); $('matchEmpty').classList.toggle('hidden',matches.length>0);
+    $('matchGrid').innerHTML=matches.map((match)=>{const completed=match.status==='Completed'; const opponentTeam=data.opponentTeams.find((t)=>t.id===match.opponentTeamId); return `<article class="match-card"><span class="match-status ${completed?'completed':''}">${escapeHtml(match.status)}</span><h3>${escapeHtml(data.settings.groupName)} vs ${escapeHtml(match.opponent)}</h3><p class="match-meta">${formatDate(match.date)}${match.time?` · ${escapeHtml(match.time)}`:''}<br>${escapeHtml(match.venue)} · ${match.overs} overs · ${escapeHtml(match.ballType||'Tennis')} ball${opponentTeam?`<br>${opponentTeam.players.length} opponent players listed`:''}</p><div class="score-strip"><div><small>Our team</small><strong>${completed?escapeHtml(match.ourScore):'—'}</strong></div><b>VS</b><div><small>${escapeHtml(match.opponent)}</small><strong>${completed?escapeHtml(match.opponentScore):'—'}</strong></div></div><p class="result-text">${completed?escapeHtml(match.resultSummary):escapeHtml(match.notes||'Fixture scheduled')}</p><div class="card-actions">${completed?`<button class="card-btn" data-scorecard="${match.id}">Scorecard</button>`:''}${!completed&&canScore()?`<button class="card-btn" data-live-match="${match.id}">Live score</button><button class="card-btn" data-complete-match="${match.id}">Add result</button>`:''}${isAdmin()?`<button class="card-btn danger-text" data-delete-match="${match.id}">Delete</button>`:''}</div></article>`;}).join(''); $('matchEmpty').classList.toggle('hidden',matches.length>0);
   }
+
+  function liveBatter(name) {
+    const key = String(name || 'Batter').trim() || 'Batter';
+    data.liveScoring.batting[key] = data.liveScoring.batting[key] || { runs:0, balls:0 };
+    return data.liveScoring.batting[key];
+  }
+  function liveScoreText() {
+    const s=data.liveScoring; const overs=`${Math.floor(s.legalBalls/6)}.${s.legalBalls%6}`;
+    return `${data.settings.groupName} live score: ${s.runs}/${s.wickets} in ${overs} overs vs ${s.opponent || 'Opponent'}${s.target ? ` | Target ${s.target}` : ''}`;
+  }
+  function pushLiveHistory() {
+    const s=data.liveScoring; const {history,...snapshot}=s; s.history.push(JSON.stringify(snapshot)); s.history=s.history.slice(-25);
+  }
+  function swapLiveStrike(save=true) {
+    const s=data.liveScoring; [s.striker,s.nonStriker]=[s.nonStriker,s.striker]; if(save){s.updatedAt=new Date().toISOString();saveData();renderLiveScoring();}
+  }
+  function recordLiveBall(type,value) {
+    if(!canScore())return requireLogin('Admin, captain or vice-captain login required.');
+    const s=data.liveScoring;if(!s.active)return toast('Start the live scoreboard first');pushLiveHistory();
+    const batter=liveBatter(s.striker);let label=String(value),legal=false,runs=0;
+    if(type==='run'){runs=Number(value);s.runs+=runs;batter.runs+=runs;batter.balls+=1;legal=true;}
+    else if(type==='wicket'){s.wickets=Math.min(10,s.wickets+1);batter.balls+=1;legal=true;label='W';}
+    else if(type==='wide'){s.runs+=1;s.extras+=1;label='Wd';}
+    else if(type==='noball'){s.runs+=1;s.extras+=1;label='Nb';}
+    else if(type==='bye'||type==='legbye'){s.runs+=1;s.extras+=1;batter.balls+=1;legal=true;label=type==='bye'?'B':'Lb';runs=1;}
+    if(legal){s.legalBalls+=1;if(runs%2===1)swapLiveStrike(false);if(s.legalBalls%6===0)swapLiveStrike(false);}
+    s.deliveries.push({label,type,over:`${Math.floor(Math.max(0,s.legalBalls-1)/6)}.${s.legalBalls%6}`,at:new Date().toISOString()});s.deliveries=s.deliveries.slice(-36);s.updatedAt=new Date().toISOString();s.updatedBy=isAdmin()?data.settings.adminName:(getSessionPlayer()?.name||'Scorer');
+    if(s.wickets>=10 || s.legalBalls>=Number(s.oversLimit||10)*6 || (s.target && s.runs>=s.target)){s.active=false;s.completed=true;}
+    saveData();renderLiveScoring();
+  }
+  function undoLiveBall(){if(!canScore())return;const s=data.liveScoring,previous=s.history.pop();if(!previous)return toast('Nothing to undo');const history=[...s.history];data.liveScoring={...defaultLiveScoring(),...JSON.parse(previous),history};saveData();renderLiveScoring();toast('Last ball undone');}
+  function resetLiveScore(){if(!canScore())return;askConfirm('Reset live score?','All current ball-by-ball entries will be cleared.',()=>{data.liveScoring=defaultLiveScoring();saveData();renderLiveScoring();toast('Live score reset');});}
+  function openLiveSetup(matchId=''){if(!canScore())return requireLogin('Admin, captain or vice-captain login required.');renderLiveSetupOptions();const s=data.liveScoring;const selected=matchId||s.matchId||getUpcomingMatch()?.id||'';$('liveMatchSelect').value=selected;const m=data.matches.find((x)=>x.id===selected);$('liveOpponentInput').value=m?.opponent||s.opponent||'';$('liveOversInput').value=m?.overs||s.oversLimit||10;$('liveBattingSide').value=s.battingSide||'our';$('liveTargetInput').value=s.target||'';$('liveStrikerInput').value=s.striker||activePlayers()[0]?.name||'';$('liveNonStrikerInput').value=s.nonStriker||activePlayers()[1]?.name||'';$('liveBowlerInput').value=s.bowler||'';openModal('liveSetupModal');}
+  function renderLiveSetupOptions(){const upcoming=data.matches.filter((m)=>m.status==='Upcoming');$('liveMatchSelect').innerHTML=`<option value=\"\">Custom live match</option>${upcoming.map((m)=>`<option value=\"${m.id}\">${escapeHtml(m.opponent)} · ${formatDate(m.date)}</option>`).join('')}`;$('livePlayerNames').innerHTML=activePlayers().map((p)=>`<option value=\"${escapeHtml(p.name)}\"></option>`).join('');const opponentNames=data.opponentTeams.flatMap((t)=>t.players.map((p)=>p.name));$('liveAllNames').innerHTML=[...activePlayers().map((p)=>p.name),...opponentNames].map((name)=>`<option value=\"${escapeHtml(name)}\"></option>`).join('');}
+  function renderLiveScoring(){
+    const s=data.liveScoring||defaultLiveScoring(),overs=`${Math.floor(s.legalBalls/6)}.${s.legalBalls%6}`,rate=s.legalBalls?(s.runs/(s.legalBalls/6)).toFixed(2):'0.00',striker=liveBatter(s.striker||'Striker'),non=liveBatter(s.nonStriker||'Non-striker'),need=s.target?Math.max(0,s.target-s.runs):null;
+    $('liveStatus').textContent=s.active?'LIVE':s.completed?'INNINGS ENDED':'NOT STARTED';$('liveStatus').classList.toggle('live',s.active);$('liveFixture').textContent=s.opponent?`${data.settings.groupName} vs ${s.opponent}`:'Choose a match to begin';$('liveTotal').textContent=`${s.runs}/${s.wickets}`;$('liveOvers').textContent=overs;$('liveRunRate').textContent=rate;$('liveTargetDisplay').textContent=s.target||'—';$('liveNeed').textContent=need===null?'—':need;$('liveExtras').textContent=s.extras;$('liveBattingTeam').textContent=s.battingSide==='our'?`${data.settings.groupName} batting`:`${s.opponent||'Opponent'} batting`;$('liveStrikerName').textContent=s.striker||'Striker';$('liveStrikerStat').textContent=`${striker.runs} (${striker.balls})`;$('liveNonStrikerName').textContent=s.nonStriker||'Non-striker';$('liveNonStrikerStat').textContent=`${non.runs} (${non.balls})`;$('liveBowlerName').textContent=s.bowler||'Bowler';$('liveLimit').textContent=`${s.oversLimit||10} overs`;$('liveSavedAt').textContent=s.updatedAt?`Last saved ${formatTime(s.updatedAt)} by ${s.updatedBy||'scorer'}`:'Set up a match to start scoring.';
+    const recent=s.deliveries.slice(-18);$('liveDeliveries').innerHTML=recent.length?recent.map((d)=>`<span class=\"delivery-ball ${d.label==='W'?'wicket':(['4','6'].includes(d.label)?'boundary':'')}\">${escapeHtml(d.label)}</span>`).join(''):'<span class=\"muted\">No balls recorded yet.</span>';
+    $$('[data-live-ball]').forEach((b)=>b.disabled=!s.active||!canScore());['liveUndoBtn','liveSwapBtn','liveChangePlayersBtn','liveUseResultBtn','liveShareBtn','liveEndBtn'].forEach((id)=>{if($(id))$(id).disabled=!s.active||!canScore();});
+  }
+  function useLiveInResult(){const s=data.liveScoring;if(!s.opponent)return toast('Start a live match first');openResultModal(s.matchId||'');$('resultOpponent').value=s.opponent;const score=`${s.runs}/${s.wickets}`;if(s.battingSide==='our')$('ourScore').value=score;else $('opponentScore').value=score;$('resultNotes').value=`Live innings: ${oversLabel(s.legalBalls)} overs. ${s.extras} extras.`;}
+  function oversLabel(balls){return `${Math.floor(Number(balls||0)/6)}.${Number(balls||0)%6}`;}
+  async function shareLiveScore(){const text=liveScoreText();try{if(navigator.share){await navigator.share({title:'Ball Kho Gayi XI Live Score',text});}else if(navigator.clipboard){await navigator.clipboard.writeText(text);toast('Live score copied');}else{window.prompt('Copy live score',text);}}catch{/* share cancelled */}}
 
   function renderTeams() {
     const stats=new Map(calculatePlayerStats().map((row)=>[row.player.id,row])); $('ourPlayerGrid').innerHTML=activePlayers().sort((a,b)=>a.name.localeCompare(b.name)).map((p)=>playerCard(p,stats.get(p.id))).join('');
@@ -299,7 +349,7 @@
 
   function renderAdmin() {
     if(!isAdmin())return;
-    const s=data.settings; $('groupNameInput').value=s.groupName; $('taglineInput').value=s.tagline; $('heroTitleInput').value=s.heroTitle; $('heroSubtitleInput').value=s.heroSubtitle; $('homeGroundInput').value=s.homeGround; $('adminPinInput').value='';
+    const s=data.settings; $('groupNameInput').value=s.groupName; $('taglineInput').value=s.tagline; $('heroTitleInput').value=s.heroTitle; $('heroSubtitleInput').value=s.heroSubtitle; $('homeGroundInput').value=s.homeGround; $('whatsappGroupInput').value=s.whatsappGroupUrl||''; $('adminPinInput').value='';
     const options=`<option value="">Not assigned</option>${activePlayers().map((p)=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}`; $('captainSelect').innerHTML=options; $('viceCaptainSelect').innerHTML=options; $('captainSelect').value=s.captainId||''; $('viceCaptainSelect').value=s.viceCaptainId||'';
     $('joinRequestList').innerHTML=data.joinRequests.length?data.joinRequests.map((r)=>`<div class="request-item">${avatarHtml(r)}<div><strong>${escapeHtml(r.name)}</strong><small>#${r.jersey} · ${escapeHtml(r.role)} · ${escapeHtml(r.phone)}</small></div><div class="section-actions"><button class="card-btn" data-approve-request="${r.id}">Approve</button><button class="card-btn danger-text" data-reject-request="${r.id}">Reject</button></div></div>`).join(''):'<p class="muted">No pending requests.</p>';
     $('adminPlayerList').innerHTML=activePlayers().map((p)=>`<div class="admin-item">${avatarHtml(p)}<div><strong>${escapeHtml(p.name)}</strong><small>#${p.jersey} · ${escapeHtml(leadershipLabel(p.id))} · ${escapeHtml(p.phone||'No phone')}</small></div><div class="section-actions"><button class="card-btn" data-edit-player="${p.id}">Edit</button><button class="card-btn danger-text" data-delete-player="${p.id}">Remove</button></div></div>`).join('');
@@ -331,13 +381,13 @@
   }
 
   function openProfileModal() {
-    const p=getSessionPlayer(); if(!p)return requireLogin(); $('profileName').value=p.name; $('profilePhone').value=p.phone||''; $('profileJersey').value=p.jersey; $('profileClass').value=p.className||''; $('profileNote').value=p.note||''; $('profilePhoto').value=''; openModal('profileModal');
+    const p=getSessionPlayer(); if(!p)return requireLogin(); $('profileName').value=p.name; $('profilePhone').value=p.phone||''; $('profileJersey').value=p.jersey; $('profileRole').value=p.role||'Batter'; $('profileClass').value=p.className||''; $('profileNote').value=p.note||''; $('profilePhoto').value=''; openModal('profileModal');
   }
 
   function openOpponentTeamModal(id='') { if(!isAdmin())return requireLogin(); const t=data.opponentTeams.find((x)=>x.id===id); $('editingOpponentTeamId').value=id; $('opponentTeamModalTitle').textContent=t?'Edit team':'Add team'; $('opponentTeamName').value=t?.name||''; $('opponentTeamColor').value=t?.color||'#d6a928'; $('opponentTeamGround').value=t?.ground||''; openModal('opponentTeamModal'); }
   function openOpponentPlayerModal(teamId,playerId=''){if(!isAdmin())return requireLogin();const t=data.opponentTeams.find((x)=>x.id===teamId);const p=t?.players.find((x)=>x.id===playerId);$('opponentPlayerTeamId').value=teamId;$('editingOpponentPlayerId').value=playerId;$('opponentPlayerName').value=p?.name||'';$('opponentPlayerJersey').value=p?.jersey??'';$('opponentPlayerRole').value=p?.role||'Batter';$('opponentPlayerNote').value=p?.note||'';openModal('opponentPlayerModal');}
 
-  function openResultModal(matchId='') { if(!canManage())return requireLogin('Captain or admin login required.'); $('resultForm').reset(); $('resultForm').dataset.matchId=matchId; $('resultDate').value=toDateInput(new Date()); $('resultOvers').value=10; renderPerformanceRows(); if(matchId){const m=data.matches.find((x)=>x.id===matchId);if(m){$('resultOpponent').value=m.opponent;$('resultDate').value=m.date;$('resultVenue').value=m.venue;$('resultOvers').value=m.overs;}} openModal('resultModal'); }
+  function openResultModal(matchId='') { if(!canManage())return requireLogin('Admin, captain or vice-captain login required.'); $('resultForm').reset(); $('resultForm').dataset.matchId=matchId; $('resultDate').value=toDateInput(new Date()); $('resultOvers').value=10; renderPerformanceRows(); if(matchId){const m=data.matches.find((x)=>x.id===matchId);if(m){$('resultOpponent').value=m.opponent;$('resultDate').value=m.date;$('resultVenue').value=m.venue;$('resultOvers').value=m.overs;}} openModal('resultModal'); }
   function collectPerformances(){return $$('[data-performance-player]').map((row)=>{const r={playerId:row.dataset.performancePlayer};$$('[data-field]',row).forEach((input)=>r[input.dataset.field]=Number(input.value||0));return r;}).filter((p)=>['runs','balls','wickets','oversBowled','runsConceded','catches'].some((key)=>Number(p[key])>0));}
 
   function openScorecard(matchId){const match=data.matches.find((m)=>m.id===matchId);if(!match)return;const performances=(match.performances||[]).map((p)=>({...p,player:data.players.find((x)=>x.id===p.playerId)})).filter((p)=>p.player);$('scorecardContent').innerHTML=`<div class="scorecard-hero"><p class="eyebrow">Match Scorecard</p><h2>${escapeHtml(data.settings.groupName)} vs ${escapeHtml(match.opponent)}</h2><p>${formatDate(match.date)} · ${escapeHtml(match.venue)} · ${match.overs} overs</p><div class="scorecard-score"><div><small>${escapeHtml(data.settings.groupName)}</small><strong>${escapeHtml(match.ourScore)}</strong></div><div><small>${escapeHtml(match.opponent)}</small><strong>${escapeHtml(match.opponentScore)}</strong></div></div><p><strong>${escapeHtml(match.resultSummary)}</strong></p></div><div class="table-wrap"><table><thead><tr><th>Player</th><th>Runs</th><th>Balls</th><th>Wickets</th><th>Overs</th><th>Catches</th></tr></thead><tbody>${performances.length?performances.map((p)=>`<tr><td>${escapeHtml(p.player.name)}</td><td>${p.runs||0}</td><td>${p.balls||0}</td><td>${p.wickets||0}</td><td>${p.oversBowled||0}</td><td>${p.catches||0}</td></tr>`).join(''):'<tr><td colspan="6">No player data entered.</td></tr>'}</tbody></table></div>`;openModal('scorecardModal');}
@@ -357,12 +407,16 @@
 
     $('joinForm').addEventListener('submit',async(e)=>{e.preventDefault();const name=$('joinName').value.trim(),phone=$('joinPhone').value.trim(),jersey=Number($('joinJersey').value),pin=$('joinPin').value.trim();if(!validPhone(phone))return toast('Enter a valid phone number');if(!validPin(pin))return toast('PIN must contain 4–6 numbers');if(!jerseyAvailable(jersey))return toast('That jersey number is already used');if(data.joinRequests.some((r)=>r.phone.replace(/\D/g,'')===phone.replace(/\D/g,'')))return toast('A request already exists for this phone');let photo='';try{photo=await readCompressedImage($('joinPhoto').files[0]);}catch(err){return toast(err.message);}data.joinRequests.push({id:uid('request'),name,phone,jersey,role:$('joinRole').value,className:$('joinClass').value.trim()||'School Squad',note:$('joinNote').value.trim(),photo,pinHash:await hashPin(pin),createdAt:new Date().toISOString()});saveData();e.target.reset();closeModal('joinModal');toast('Join request sent to Swastik admin');renderAdmin();});
 
-    $('editProfileBtn').addEventListener('click',openProfileModal); $('profileForm').addEventListener('submit',async(e)=>{e.preventDefault();const p=getSessionPlayer();if(!p)return;const jersey=Number($('profileJersey').value);if(!jerseyAvailable(jersey,p.id))return toast('That jersey number is already used');const phone=$('profilePhone').value.trim();if(phone&&!validPhone(phone))return toast('Enter a valid phone number');let photo=p.photo||'';try{if($('profilePhoto').files[0])photo=await readCompressedImage($('profilePhoto').files[0]);}catch(err){return toast(err.message);}Object.assign(p,{name:$('profileName').value.trim(),phone,jersey,className:$('profileClass').value.trim()||'School Squad',note:$('profileNote').value.trim(),photo});saveData();closeModal('profileModal');renderAll();toast('Profile updated on all devices');});
+    $('editProfileBtn').addEventListener('click',openProfileModal); $('profileForm').addEventListener('submit',async(e)=>{e.preventDefault();const p=getSessionPlayer();if(!p)return;const jersey=Number($('profileJersey').value);if(!jerseyAvailable(jersey,p.id))return toast('That jersey number is already used');const phone=$('profilePhone').value.trim();if(phone&&!validPhone(phone))return toast('Enter a valid phone number');let photo=p.photo||'';try{if($('profilePhoto').files[0])photo=await readCompressedImage($('profilePhoto').files[0]);}catch(err){return toast(err.message);}Object.assign(p,{name:$('profileName').value.trim(),phone,jersey,role:$('profileRole').value,className:$('profileClass').value.trim()||'School Squad',note:$('profileNote').value.trim(),photo});saveData();closeModal('profileModal');renderAll();toast('Profile updated on all devices');});
     $('changePinBtn').addEventListener('click',()=>openModal('pinModal')); $('pinForm').addEventListener('submit',async(e)=>{e.preventDefault();const current=$('currentPin').value.trim(),next=$('newPin').value.trim(),confirm=$('confirmPin').value.trim();if(!validPin(next)||next!==confirm)return toast('New PINs must match and contain 4–6 numbers');const currentHash=await hashPin(current);if(isAdmin()){if(currentHash!==data.settings.adminPinHash)return toast('Current PIN is incorrect');data.settings.adminPinHash=await hashPin(next);}else{const p=getSessionPlayer();if(!p||currentHash!==p.pinHash)return toast('Current PIN is incorrect');p.pinHash=await hashPin(next);}saveData();e.target.reset();closeModal('pinModal');toast('PIN updated');});
 
     $$('[data-availability]').forEach((b)=>b.addEventListener('click',()=>{const p=getSessionPlayer(),m=getUpcomingMatch();if(!p||!m)return;data.availability[m.id]=data.availability[m.id]||{};data.availability[m.id][p.id]=b.dataset.availability;saveData();renderAccount();toast(`Availability: ${b.dataset.availability}`);})); $('saveGoalBtn').addEventListener('click',()=>{const p=getSessionPlayer();if(!p)return requireLogin();data.goals[p.id]=$('personalGoalInput').value.trim();saveData();toast('Goal saved');});
 
     $('scheduleBtn').addEventListener('click',()=>canManage()?openModal('scheduleModal'):requireLogin()); $('captainScheduleBtn').addEventListener('click',()=>openModal('scheduleModal')); $('quickResultBtn').addEventListener('click',()=>openResultModal()); $('captainResultBtn').addEventListener('click',()=>openResultModal());
+    $('startLiveBtn').addEventListener('click',()=>openLiveSetup()); $('liveSetupBtn').addEventListener('click',()=>openLiveSetup()); $('liveUndoBtn').addEventListener('click',undoLiveBall); $('liveResetBtn').addEventListener('click',resetLiveScore); $('liveSwapBtn').addEventListener('click',()=>swapLiveStrike()); $('liveChangePlayersBtn').addEventListener('click',()=>openLiveSetup(data.liveScoring.matchId)); $('liveUseResultBtn').addEventListener('click',useLiveInResult); $('liveShareBtn').addEventListener('click',shareLiveScore); $('liveEndBtn').addEventListener('click',()=>askConfirm('End this innings?','The score will remain saved and can be copied into the Result Desk.',()=>{data.liveScoring.active=false;data.liveScoring.completed=true;data.liveScoring.updatedAt=new Date().toISOString();saveData();renderLiveScoring();toast('Innings ended');}));
+    $('liveMatchSelect').addEventListener('change',()=>{const m=data.matches.find((x)=>x.id===$('liveMatchSelect').value);if(m){$('liveOpponentInput').value=m.opponent;$('liveOversInput').value=m.overs;}});
+    $('liveSetupForm').addEventListener('submit',(e)=>{e.preventDefault();if(!canScore())return requireLogin();const previous=data.liveScoring,matchId=$('liveMatchSelect').value,opponent=$('liveOpponentInput').value.trim(),sameMatch=!previous.completed&&previous.opponent===opponent&&previous.matchId===matchId,base=sameMatch?previous:defaultLiveScoring();data.liveScoring={...base,active:true,completed:false,matchId,opponent,battingSide:$('liveBattingSide').value,oversLimit:Number($('liveOversInput').value||10),target:Number($('liveTargetInput').value||0),striker:$('liveStrikerInput').value.trim(),nonStriker:$('liveNonStrikerInput').value.trim(),bowler:$('liveBowlerInput').value.trim(),startedAt:base.startedAt||new Date().toISOString(),updatedAt:new Date().toISOString(),updatedBy:isAdmin()?data.settings.adminName:(getSessionPlayer()?.name||'Scorer')};liveBatter(data.liveScoring.striker);liveBatter(data.liveScoring.nonStriker);saveData();closeModal('liveSetupModal');renderLiveScoring();document.querySelector('#live-scoring').scrollIntoView({behavior:'smooth'});toast('Live scoreboard ready');});
+    $$('[data-live-ball]').forEach((b)=>b.addEventListener('click',()=>recordLiveBall(b.dataset.liveBall,b.dataset.value)));
     $('scheduleForm').addEventListener('submit',(e)=>{e.preventDefault();if(!canManage())return requireLogin();const teamId=$('scheduleOpponentTeam').value;const team=data.opponentTeams.find((t)=>t.id===teamId);const opponent=team?.name||$('scheduleOpponent').value.trim();if(!opponent)return toast('Choose or enter an opponent');data.matches.push({id:uid('match'),status:'Upcoming',opponent,opponentTeamId:teamId,venue:$('scheduleVenue').value.trim(),date:$('scheduleDate').value,time:$('scheduleTime').value,overs:Number($('scheduleOvers').value),ballType:$('scheduleBall').value,notes:$('scheduleNotes').value.trim(),createdAt:Date.now()});saveData();e.target.reset();closeModal('scheduleModal');renderAll();toast('Fixture scheduled');});
     $('resultForm').addEventListener('submit',(e)=>{e.preventDefault();if(!canManage())return requireLogin();const existingId=e.target.dataset.matchId;const old=data.matches.find((m)=>m.id===existingId);const match={id:existingId||uid('match'),status:'Completed',opponent:$('resultOpponent').value.trim(),opponentTeamId:old?.opponentTeamId||'',date:$('resultDate').value,venue:$('resultVenue').value.trim(),time:old?.time||'',overs:Number($('resultOvers').value),ballType:old?.ballType||'Tennis',ourScore:$('ourScore').value.trim(),opponentScore:$('opponentScore').value.trim(),tossWinner:$('resultTossWinner').value,tossDecision:$('resultTossDecision').value,outcome:$('resultOutcome').value,resultSummary:$('resultSummary').value.trim(),notes:$('resultNotes').value.trim(),performances:collectPerformances(),createdAt:Date.now()};data.matches=existingId?data.matches.map((m)=>m.id===existingId?match:m):[...data.matches,match];saveData();closeModal('resultModal');renderAll();toast('Match saved and stats updated');});
     $$('[data-match-filter]').forEach((b)=>b.addEventListener('click',()=>{matchFilter=b.dataset.matchFilter;$$('[data-match-filter]').forEach((x)=>x.classList.toggle('active',x===b));renderMatches();}));
@@ -382,7 +436,7 @@
     $$('[data-stat]').forEach((b)=>b.addEventListener('click',()=>{statMode=b.dataset.stat;$$('[data-stat]').forEach((x)=>x.classList.toggle('active',x===b));renderStats();}));
     $('editNoticeBtn').addEventListener('click',()=>{if(!canManage())return requireLogin();$('noticeTitleInput').value=data.settings.announcementTitle;$('noticeTextInput').value=data.settings.announcementText;openModal('noticeModal');}); $('noticeForm').addEventListener('submit',(e)=>{e.preventDefault();data.settings.announcementTitle=$('noticeTitleInput').value.trim();data.settings.announcementText=$('noticeTextInput').value.trim();saveData();closeModal('noticeModal');renderSummary();toast('Notice published');});
 
-    $('saveSettingsBtn').addEventListener('click',async()=>{if(!isAdmin())return;const captain=$('captainSelect').value,vice=$('viceCaptainSelect').value,newPin=$('adminPinInput').value.trim();if(captain&&vice&&captain===vice)return toast('Captain and vice-captain must be different');if(newPin&&!validPin(newPin))return toast('Admin PIN must contain 4–6 numbers');let hero=data.settings.heroImage,logo=data.settings.logoImage;try{if($('heroImageInput').files[0])hero=await readCompressedImage($('heroImageInput').files[0],1600,1200,.82);if($('logoImageInput').files[0])logo=await readCompressedImage($('logoImageInput').files[0],512,512,.82);}catch(err){return toast(err.message);}Object.assign(data.settings,{groupName:$('groupNameInput').value.trim()||'Ball Kho Gayi XI',tagline:$('taglineInput').value.trim()||'Bat · Ball · Repeat',heroTitle:$('heroTitleInput').value.trim(),heroSubtitle:$('heroSubtitleInput').value.trim(),homeGround:$('homeGroundInput').value.trim(),captainId:captain,viceCaptainId:vice,heroImage:hero,logoImage:logo});if(newPin)data.settings.adminPinHash=await hashPin(newPin);$('adminPinInput').value='';saveData();renderAll();toast('Website settings saved');});
+    $('saveSettingsBtn').addEventListener('click',async()=>{if(!isAdmin())return;const captain=$('captainSelect').value,vice=$('viceCaptainSelect').value,newPin=$('adminPinInput').value.trim();if(captain&&vice&&captain===vice)return toast('Captain and vice-captain must be different');if(newPin&&!validPin(newPin))return toast('Admin PIN must contain 4–6 numbers');let hero=data.settings.heroImage,logo=data.settings.logoImage;try{if($('heroImageInput').files[0])hero=await readCompressedImage($('heroImageInput').files[0],1600,1200,.82);if($('logoImageInput').files[0])logo=await readCompressedImage($('logoImageInput').files[0],512,512,.82);}catch(err){return toast(err.message);}Object.assign(data.settings,{groupName:$('groupNameInput').value.trim()||'Ball Kho Gayi XI',tagline:$('taglineInput').value.trim()||'Bat · Ball · Repeat',heroTitle:$('heroTitleInput').value.trim(),heroSubtitle:$('heroSubtitleInput').value.trim(),homeGround:$('homeGroundInput').value.trim(),whatsappGroupUrl:$('whatsappGroupInput').value.trim(),captainId:captain,viceCaptainId:vice,heroImage:hero,logoImage:logo});if(newPin)data.settings.adminPinHash=await hashPin(newPin);$('adminPinInput').value='';saveData();renderAll();toast('Website settings saved');});
     $('exportBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ball-kho-gayi-xi-backup.json';a.click();URL.revokeObjectURL(url);}); $('importInput').addEventListener('change',async(e)=>{const file=e.target.files[0];if(!file)return;try{data=migrateData(JSON.parse(await file.text()));saveData();renderAll();toast('Backup imported');}catch{toast('Invalid backup file');}e.target.value='';}); $('resetBtn').addEventListener('click',()=>askConfirm('Reset all website data?','This restores the original squad, matches and settings.',()=>{data=migrateData(deepClone(seedData));session=null;saveSession();saveData();renderAll();toast('Website reset');}));
 
     $('confirmCancel').addEventListener('click',closeConfirm); $('confirmOk').addEventListener('click',()=>{const action=confirmAction;closeConfirm();if(action)action();});
@@ -390,6 +444,7 @@
     document.addEventListener('click',(e)=>{
       const target=e.target.closest('button,[data-player-detail]');if(!target)return;
       if(target.dataset.scorecard)return openScorecard(target.dataset.scorecard);
+      if(target.dataset.liveMatch)return openLiveSetup(target.dataset.liveMatch);
       if(target.dataset.completeMatch)return openResultModal(target.dataset.completeMatch);
       if(target.dataset.deleteMatch)return askConfirm('Delete this match?','The scorecard and its stats will be removed.',()=>{data.matches=data.matches.filter((m)=>m.id!==target.dataset.deleteMatch);saveData();renderAll();toast('Match deleted');});
       if(target.dataset.playerDetail)return openPlayerDetail(target.dataset.playerDetail);

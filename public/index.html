@@ -23,6 +23,7 @@
     </a>
     <nav class="desktop-nav" aria-label="Main navigation">
       <a href="#matches">Matches</a>
+      <a href="#live-scoring" data-manager-only>Live Score</a>
       <a href="#teams">Teams</a>
       <a href="#practice">Team Maker</a>
       <a href="#chat">Chat</a>
@@ -57,7 +58,7 @@
         <div class="hero-fixture glass-panel">
           <span>Next fixture</span>
           <strong id="nextMatchTitle">No match scheduled</strong>
-          <small id="nextMatchMeta">Captain or admin can add one</small>
+          <small id="nextMatchMeta">Leadership can add one</small>
         </div>
       </div>
     </section>
@@ -85,7 +86,7 @@
         <article class="panel"><p class="eyebrow">Personal Target</p><h3>What are you working on?</h3><textarea id="personalGoalInput" rows="5" maxlength="180" placeholder="Example: score 25 runs or take two wickets"></textarea><button class="secondary-btn wide" id="saveGoalBtn" type="button">Save My Goal</button></article>
       </div>
       <div id="captainDashboard" class="captain-zone hidden">
-        <div class="section-head"><div><p class="eyebrow">Captain Control Room</p><h2>Team performance</h2></div><span class="status-chip">Leadership view</span></div>
+        <div class="section-head"><div><p class="eyebrow">Leadership Control Room</p><h2>Team performance</h2></div><span class="status-chip">Leadership view</span></div>
         <div class="metric-grid four"><div><b id="captainWins">0</b><span>Wins</span><small id="captainRecord">0 matches</small></div><div><b id="captainWinRate">0%</b><span>Win rate</span></div><div><b id="captainTeamRuns">0</b><span>Team runs</span></div><div><b id="captainStreak">—</b><span>Recent form</span></div></div>
         <div class="two-col"><article class="panel"><p class="eyebrow">Squad Availability</p><h3 id="availabilityMatchTitle">Next fixture</h3><div id="captainAvailability" class="availability-list"></div></article><article class="panel"><p class="eyebrow">Season Leaders</p><div id="captainLeaders" class="leader-list"></div><div class="section-actions"><button class="primary-btn small" id="captainScheduleBtn">Schedule Match</button><button class="secondary-btn small" id="captainResultBtn">Add Result</button></div></article></div>
       </div>
@@ -99,9 +100,39 @@
     </section>
 
     <section id="matches" class="section-shell section-block">
-      <div class="section-head"><div><p class="eyebrow">Match Center</p><h2>Fixtures and scorecards</h2></div><div class="section-actions"><button class="secondary-btn small" id="scheduleBtn" data-manager-only>Schedule Match</button><button class="primary-btn small" id="quickResultBtn" data-manager-only>Add Completed Match</button></div></div>
+      <div class="section-head"><div><p class="eyebrow">Match Center</p><h2>Fixtures and scorecards</h2></div><div class="section-actions"><button class="secondary-btn small" id="scheduleBtn" data-manager-only>Schedule Match</button><button class="primary-btn small" id="startLiveBtn" data-manager-only>Start Live Score</button><button class="secondary-btn small" id="quickResultBtn" data-manager-only>Add Completed Match</button></div></div>
       <div class="filter-row"><button class="filter active" data-match-filter="all">All</button><button class="filter" data-match-filter="Upcoming">Upcoming</button><button class="filter" data-match-filter="Completed">Completed</button></div>
       <div id="matchGrid" class="card-grid three"></div><div id="matchEmpty" class="empty hidden">No matches here yet.</div>
+    </section>
+
+
+    <section id="live-scoring" class="section-shell section-block live-score-section" data-manager-only>
+      <div class="section-head">
+        <div><p class="eyebrow">Live Scoring</p><h2>Score every ball from your phone</h2><p>Admin, captain and vice-captain can score. The scoreboard saves to MongoDB and updates on every device.</p></div>
+        <div class="section-actions"><button class="secondary-btn small" id="liveSetupBtn" type="button">Match Setup</button><button class="secondary-btn small" id="liveUndoBtn" type="button">Undo</button><button class="danger-btn small" id="liveResetBtn" type="button">Reset</button></div>
+      </div>
+      <div class="live-score-layout">
+        <article class="panel scoreboard-panel">
+          <div class="live-score-head"><div><span class="status-chip" id="liveStatus">Not started</span><p id="liveFixture">Choose a match to begin</p></div><div class="live-over"><strong id="liveOvers">0.0</strong><span>Overs</span></div></div>
+          <div class="score-total"><strong id="liveTotal">0/0</strong><span id="liveBattingTeam">Our team batting</span></div>
+          <div class="live-metrics"><div><b id="liveRunRate">0.00</b><span>Run rate</span></div><div><b id="liveTargetDisplay">—</b><span>Target</span></div><div><b id="liveNeed">—</b><span>Need</span></div><div><b id="liveExtras">0</b><span>Extras</span></div></div>
+          <div class="live-players">
+            <div class="live-player-row striker"><span>★</span><div><strong id="liveStrikerName">Striker</strong><small>On strike</small></div><b id="liveStrikerStat">0 (0)</b></div>
+            <div class="live-player-row"><span>○</span><div><strong id="liveNonStrikerName">Non-striker</strong><small>Other end</small></div><b id="liveNonStrikerStat">0 (0)</b></div>
+            <div class="live-player-row"><span>●</span><div><strong id="liveBowlerName">Bowler</strong><small>Current bowler</small></div><b id="liveLimit">10 overs</b></div>
+          </div>
+          <div class="delivery-row" id="liveDeliveries"><span class="muted">No balls recorded yet.</span></div>
+          <small class="updated-note" id="liveSavedAt">Set up a match to start scoring.</small>
+        </article>
+        <article class="panel live-controls">
+          <p class="eyebrow">Ball Result</p><div class="run-pad">
+            <button class="score-btn" data-live-ball="run" data-value="0">0</button><button class="score-btn" data-live-ball="run" data-value="1">1</button><button class="score-btn" data-live-ball="run" data-value="2">2</button><button class="score-btn" data-live-ball="run" data-value="3">3</button><button class="score-btn boundary" data-live-ball="run" data-value="4">4</button><button class="score-btn boundary" data-live-ball="run" data-value="6">6</button>
+          </div>
+          <button class="score-btn wicket wide-control" data-live-ball="wicket" data-value="W">Wicket</button>
+          <p class="eyebrow control-label">Extras</p><div class="extra-pad"><button data-live-ball="wide" data-value="Wd">Wide</button><button data-live-ball="noball" data-value="Nb">No-ball</button><button data-live-ball="bye" data-value="B">Bye</button><button data-live-ball="legbye" data-value="Lb">Leg-bye</button></div>
+          <div class="live-action-grid"><button class="secondary-btn" id="liveSwapBtn" type="button">Swap Strike</button><button class="secondary-btn" id="liveChangePlayersBtn" type="button">Change Players</button><button class="primary-btn" id="liveUseResultBtn" type="button">Use in Result Desk</button><button class="secondary-btn" id="liveShareBtn" type="button">Share Score</button><button class="danger-btn full-action" id="liveEndBtn" type="button">End Innings</button></div>
+        </article>
+      </div>
     </section>
 
     <section id="teams" class="section-shell section-block">
@@ -119,7 +150,7 @@
 
     <section id="chat" class="section-shell section-block">
       <div class="section-head"><div><p class="eyebrow">Dressing Room Chat</p><h2>Group chat</h2><p>Shared through MongoDB, so messages appear on every phone.</p></div></div>
-      <div class="chat-layout"><article class="panel chat-panel"><div id="chatMessages" class="chat-messages"></div><form id="chatForm" class="chat-form"><input id="chatInput" maxlength="280" placeholder="Log in to send a message" autocomplete="off" /><button class="primary-btn small" type="submit">Send</button></form><small id="chatStatus">Player login required to post.</small></article><aside class="panel chat-rules"><p class="eyebrow">Group Rules</p><h3>Keep it about cricket.</h3><ul><li>Match timing and availability</li><li>Ground, kit and ball updates</li><li>Friendly team discussion</li></ul><p>Admin can remove any message.</p></aside></div>
+      <div class="chat-layout"><article class="panel chat-panel"><div id="chatMessages" class="chat-messages"></div><form id="chatForm" class="chat-form"><input id="chatInput" maxlength="280" placeholder="Log in to send a message" autocomplete="off" /><button class="primary-btn small" type="submit">Send</button></form><small id="chatStatus">Player login required to post.</small></article><aside class="panel chat-rules"><p class="eyebrow">Group Rules</p><h3>Keep it about cricket.</h3><ul><li>Match timing and availability</li><li>Ground, kit and ball updates</li><li>Friendly team discussion</li></ul><p>Admin can remove any message.</p><a class="whatsapp-btn wide" id="chatWhatsappLink" href="https://chat.whatsapp.com/IHx3Ph3owBgFB0JYxm1vDp?s=cl&amp;p=a&amp;mlu=0&amp;ilr=0&amp;amv=2" target="_blank" rel="noreferrer">Join Cricket WhatsApp Group</a></aside></div>
     </section>
 
     <section id="toss" class="section-shell section-block">
@@ -135,23 +166,29 @@
     <section id="admin" class="section-shell section-block hidden" data-admin-only>
       <div class="section-head"><div><p class="eyebrow">Administrator</p><h2>Everything editable without code</h2><p>Change branding, leadership, players, teams and login settings here.</p></div></div>
       <div class="admin-grid">
-        <article class="panel form-stack"><p class="eyebrow">Website Settings</p><label>Group name<input id="groupNameInput" maxlength="40" /></label><label>Tagline<input id="taglineInput" maxlength="60" /></label><label>Hero title<input id="heroTitleInput" maxlength="90" /></label><label>Hero subtitle<textarea id="heroSubtitleInput" rows="4" maxlength="240"></textarea></label><label>Home ground<input id="homeGroundInput" maxlength="80" /></label><label>Captain<select id="captainSelect"></select></label><label>Vice-captain<select id="viceCaptainSelect"></select></label><label>New admin PIN (optional)<input id="adminPinInput" inputmode="numeric" maxlength="6" placeholder="Leave blank to keep current" /></label><label>Replace hero image<input id="heroImageInput" type="file" accept="image/*" /></label><label>Replace team logo<input id="logoImageInput" type="file" accept="image/*" /></label><button class="primary-btn wide" id="saveSettingsBtn">Save Website Settings</button></article>
+        <article class="panel form-stack"><p class="eyebrow">Website Settings</p><label>Group name<input id="groupNameInput" maxlength="40" /></label><label>Tagline<input id="taglineInput" maxlength="60" /></label><label>Hero title<input id="heroTitleInput" maxlength="90" /></label><label>Hero subtitle<textarea id="heroSubtitleInput" rows="4" maxlength="240"></textarea></label><label>Home ground<input id="homeGroundInput" maxlength="80" /></label><label>WhatsApp group link<input id="whatsappGroupInput" type="url" maxlength="250" /></label><label>Captain<select id="captainSelect"></select></label><label>Vice-captain<select id="viceCaptainSelect"></select></label><label>New admin PIN (optional)<input id="adminPinInput" inputmode="numeric" maxlength="6" placeholder="Leave blank to keep current" /></label><label>Replace hero image<input id="heroImageInput" type="file" accept="image/*" /></label><label>Replace team logo<input id="logoImageInput" type="file" accept="image/*" /></label><button class="primary-btn wide" id="saveSettingsBtn">Save Website Settings</button></article>
         <article class="panel"><p class="eyebrow">Join Requests</p><h3>Approve new players</h3><div id="joinRequestList" class="request-list"></div></article>
         <article class="panel"><p class="eyebrow">Squad Manager</p><h3>Our players</h3><button class="primary-btn wide" id="addPlayerBtn">Add Player Manually</button><div id="adminPlayerList" class="admin-list"></div></article>
         <article class="panel"><p class="eyebrow">Data Tools</p><h3>MongoDB scorebook</h3><p class="muted">Changes save to the shared database and also remain available as a local backup.</p><div class="stack-actions"><button class="secondary-btn wide" id="exportBtn">Export JSON Backup</button><label class="file-btn wide">Import JSON Backup<input id="importInput" type="file" accept="application/json" /></label><button class="danger-btn wide" id="resetBtn">Reset Website Data</button></div></article>
       </div>
     </section>
 
+
+    <section id="thankyou" class="section-shell section-block thankyou-section">
+      <div class="thankyou-visual"><img id="thankYouLogo" src="assets/ball-kho-gayi-circle.png" alt="Ball Kho Gayi XI logo" /></div>
+      <div class="thankyou-copy"><p class="eyebrow">Thank You, Cricket</p><h2>For every run, wicket, comeback and lost ball.</h2><p>Ball Kho Gayi XI is our shared cricket memory. Keep your profile updated, help the scorer, respect every teammate and make every school match count.</p><div class="section-actions"><a class="whatsapp-btn" id="thankWhatsappLink" href="https://chat.whatsapp.com/IHx3Ph3owBgFB0JYxm1vDp?s=cl&amp;p=a&amp;mlu=0&amp;ilr=0&amp;amv=2" target="_blank" rel="noreferrer">Join Our WhatsApp Group</a><a class="secondary-btn" href="assets/Ball-Kho-Gayi-XI-Player-Guide.pdf" target="_blank" rel="noreferrer">Open Player Guide PDF</a></div></div>
+    </section>
+
     <footer class="section-shell footer"><div class="brand footer-brand"><img id="footerLogo" src="assets/logo-64.png" alt=""><span><strong id="footerBrand">Ball Kho Gayi XI</strong><small>Bat · Ball · Repeat</small></span></div><p>Designed and developed by <strong>Swastik Shukla</strong></p><div><a href="mailto:jiking847@gmail.com">Email</a> · <a href="https://www.instagram.com/swastik_shukla__/" target="_blank" rel="noreferrer">Instagram</a></div></footer>
   </main>
 
-  <nav class="mobile-nav"><a href="#home">⌂<span>Home</span></a><a href="#matches">▣<span>Matches</span></a><a href="#teams">♙<span>Teams</span></a><a href="#chat">◌<span>Chat</span></a><button id="mobileAccountBtn">◎<span>Account</span></button></nav>
+  <nav class="mobile-nav"><a href="#home">⌂<span>Home</span></a><a href="#matches">▣<span>Matches</span></a><a href="#live-scoring" data-manager-only>●<span>Live</span></a><a href="#chat">◌<span>Chat</span></a><button id="mobileAccountBtn">◎<span>Account</span></button></nav>
 
   <div class="modal" id="loginModal" aria-hidden="true"><div class="modal-box small-modal"><button class="close" data-close="loginModal">×</button><img class="modal-logo" src="assets/ball-kho-gayi-circle.png" alt=""><p class="eyebrow">Dressing Room Access</p><h2>Log in</h2><form id="loginForm" class="form-stack"><label>Account<select id="loginAccount"></select></label><label>Private PIN<input id="loginPin" type="password" inputmode="numeric" minlength="4" maxlength="6" required autocomplete="current-password" /></label><button class="primary-btn wide" type="submit">Enter</button></form><div class="join-callout"><strong>New to the team?</strong><p>Create a player request with your name, jersey, phone, photo and your own PIN.</p><button class="secondary-btn wide" id="openJoinBtn">Request to Join</button></div></div></div>
 
   <div class="modal" id="joinModal" aria-hidden="true"><div class="modal-box"><button class="close" data-close="joinModal">×</button><p class="eyebrow">New Player</p><h2>Request to join</h2><form id="joinForm" class="form-grid"><label>Full name<input id="joinName" maxlength="40" required /></label><label>Phone number<input id="joinPhone" inputmode="tel" maxlength="15" required /></label><label>Jersey number<input id="joinJersey" type="number" min="0" max="999" required /></label><label>Choose PIN<input id="joinPin" type="password" inputmode="numeric" minlength="4" maxlength="6" required /></label><label>Primary role<select id="joinRole"><option>Batter</option><option>Bowler</option><option>All-rounder</option><option>Wicketkeeper</option></select></label><label>Class / Section<input id="joinClass" maxlength="30" placeholder="Class 10-B" /></label><label class="full">Profile photo<input id="joinPhoto" type="file" accept="image/*" /></label><label class="full">Short note<textarea id="joinNote" rows="3" maxlength="150" placeholder="Batting or bowling style"></textarea></label><button class="primary-btn full" type="submit">Send Join Request</button></form></div></div>
 
-  <div class="modal" id="profileModal" aria-hidden="true"><div class="modal-box"><button class="close" data-close="profileModal">×</button><p class="eyebrow">My Profile</p><h2>Edit details</h2><form id="profileForm" class="form-grid"><label>Full name<input id="profileName" maxlength="40" required /></label><label>Phone number<input id="profilePhone" inputmode="tel" maxlength="15" /></label><label>Jersey number<input id="profileJersey" type="number" min="0" max="999" required /></label><label>Class / Section<input id="profileClass" maxlength="30" /></label><label class="full">New profile photo<input id="profilePhoto" type="file" accept="image/*" /></label><label class="full">Player note<textarea id="profileNote" rows="3" maxlength="180"></textarea></label><button class="primary-btn full" type="submit">Save Profile</button></form></div></div>
+  <div class="modal" id="profileModal" aria-hidden="true"><div class="modal-box"><button class="close" data-close="profileModal">×</button><p class="eyebrow">My Profile</p><h2>Edit details</h2><form id="profileForm" class="form-grid"><label>Full name<input id="profileName" maxlength="40" required /></label><label>Phone number<input id="profilePhone" inputmode="tel" maxlength="15" /></label><label>Jersey number<input id="profileJersey" type="number" min="0" max="999" required /></label><label>Primary role<select id="profileRole"><option>Batter</option><option>Bowler</option><option>All-rounder</option><option>Wicketkeeper</option></select></label><label>Class / Section<input id="profileClass" maxlength="30" /></label><label class="full">New profile photo<input id="profilePhoto" type="file" accept="image/*" /></label><label class="full">Player note<textarea id="profileNote" rows="3" maxlength="180"></textarea></label><button class="primary-btn full" type="submit">Save Profile</button></form></div></div>
 
   <div class="modal" id="pinModal" aria-hidden="true"><div class="modal-box small-modal"><button class="close" data-close="pinModal">×</button><p class="eyebrow">Security</p><h2>Change PIN</h2><form id="pinForm" class="form-stack"><label>Current PIN<input id="currentPin" type="password" inputmode="numeric" required maxlength="6" /></label><label>New PIN<input id="newPin" type="password" inputmode="numeric" required minlength="4" maxlength="6" /></label><label>Confirm new PIN<input id="confirmPin" type="password" inputmode="numeric" required minlength="4" maxlength="6" /></label><button class="primary-btn wide">Update PIN</button></form></div></div>
 
@@ -168,6 +205,9 @@
   <div class="modal" id="practiceNameModal" aria-hidden="true"><div class="modal-box small-modal"><button class="close" data-close="practiceNameModal">×</button><p class="eyebrow">Practice Teams</p><h2>Rename sides</h2><form id="practiceNameForm" class="form-stack"><label>First side<input id="practiceNameInputA" required /></label><label>Second side<input id="practiceNameInputB" required /></label><button class="primary-btn wide">Save Names</button></form></div></div>
 
   <div class="modal" id="noticeModal" aria-hidden="true"><div class="modal-box small-modal"><button class="close" data-close="noticeModal">×</button><p class="eyebrow">Captain’s Board</p><h2>Edit notice</h2><form id="noticeForm" class="form-stack"><label>Title<input id="noticeTitleInput" required /></label><label>Message<textarea id="noticeTextInput" rows="5" required></textarea></label><button class="primary-btn wide">Publish Notice</button></form></div></div>
+
+
+  <div class="modal" id="liveSetupModal" aria-hidden="true"><div class="modal-box"><button class="close" data-close="liveSetupModal">×</button><p class="eyebrow">Live Match Setup</p><h2>Prepare the scoreboard</h2><form id="liveSetupForm" class="form-grid"><label>Fixture<select id="liveMatchSelect"></select></label><label>Batting side<select id="liveBattingSide"><option value="our">Our team</option><option value="opponent">Opponent</option></select></label><label>Opponent / match name<input id="liveOpponentInput" required /></label><label>Overs limit<input id="liveOversInput" type="number" min="1" max="50" value="10" required /></label><label>Target (optional)<input id="liveTargetInput" type="number" min="0" max="999" /></label><label>Striker<input id="liveStrikerInput" list="livePlayerNames" required /></label><label>Non-striker<input id="liveNonStrikerInput" list="livePlayerNames" required /></label><label>Current bowler<input id="liveBowlerInput" list="liveAllNames" required /></label><datalist id="livePlayerNames"></datalist><datalist id="liveAllNames"></datalist><button class="primary-btn full" type="submit">Start / Update Live Score</button></form></div></div>
 
   <div class="modal" id="scorecardModal" aria-hidden="true"><div class="modal-box large-modal"><button class="close" data-close="scorecardModal">×</button><div id="scorecardContent"></div></div></div>
   <div class="confirm" id="confirmDialog"><div class="confirm-box"><h3 id="confirmTitle">Are you sure?</h3><p id="confirmText"></p><div class="section-actions"><button class="secondary-btn small" id="confirmCancel">Cancel</button><button class="danger-btn small" id="confirmOk">Continue</button></div></div></div>
