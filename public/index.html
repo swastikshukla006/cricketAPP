@@ -40,6 +40,11 @@
     </div>
   </header>
 
+  <button class="mobile-theme-toggle" id="mobileThemeBtn" type="button" aria-label="Switch to dark mode" title="Switch light or dark mode">
+    <span class="mobile-theme-icon" id="mobileThemeIcon" aria-hidden="true">☾</span>
+    <span id="mobileThemeText">Dark</span>
+  </button>
+
   <main id="home">
     <section class="front-hero" id="frontHero">
       <img class="front-image" id="heroImage" src="assets/cric-time-front.jpg" alt="School cricket on a green ground surrounded by hills" />
@@ -150,7 +155,19 @@
 
     <section id="chat" class="section-shell section-block">
       <div class="section-head"><div><p class="eyebrow">Dressing Room Chat</p><h2>Group chat</h2><p>Shared through MongoDB, so messages appear on every phone.</p></div></div>
-      <div class="chat-layout"><article class="panel chat-panel"><div id="chatMessages" class="chat-messages"></div><form id="chatForm" class="chat-form"><input id="chatInput" maxlength="280" placeholder="Log in to send a message" autocomplete="off" /><button class="primary-btn small" type="submit">Send</button></form><small id="chatStatus">Player login required to post.</small></article><aside class="panel chat-rules"><p class="eyebrow">Group Rules</p><h3>Keep it about cricket.</h3><ul><li>Match timing and availability</li><li>Ground, kit and ball updates</li><li>Friendly team discussion</li></ul><p>Admin can remove any message.</p><a class="whatsapp-btn wide" id="chatWhatsappLink" href="https://chat.whatsapp.com/IHx3Ph3owBgFB0JYxm1vDp?s=cl&amp;p=a&amp;mlu=0&amp;ilr=0&amp;amv=2" target="_blank" rel="noreferrer">Join Cricket WhatsApp Group</a></aside></div>
+      <div class="chat-layout">
+        <article class="panel chat-panel"><div id="chatMessages" class="chat-messages"></div><form id="chatForm" class="chat-form"><input id="chatInput" maxlength="280" placeholder="Log in to send a message" autocomplete="off" /><button class="primary-btn small" type="submit">Send</button></form><small id="chatStatus">Player login required to post.</small></article>
+        <aside class="panel chat-rules">
+          <p class="eyebrow">Group Rules</p><h3>Keep it about cricket.</h3><ul><li>Match timing and availability</li><li>Ground, kit and ball updates</li><li>Friendly team discussion</li></ul><p>Admin can remove any message.</p>
+          <div class="notification-card" id="notificationCard">
+            <div class="notification-card-head"><span class="notification-bell">🔔</span><div><strong>Phone Notifications</strong><small id="notificationStatus">Checking notification support…</small></div></div>
+            <button class="primary-btn wide" id="notificationToggleBtn" type="button">Enable Notifications</button>
+            <button class="secondary-btn wide hidden" id="notificationTestBtn" type="button">Send Test Notification</button>
+            <small>Receive chat messages, match notices, announcements and important live-score updates when the app is closed.</small>
+          </div>
+          <a class="whatsapp-btn wide" id="chatWhatsappLink" href="https://chat.whatsapp.com/IHx3Ph3owBgFB0JYxm1vDp?s=cl&amp;p=a&amp;mlu=0&amp;ilr=0&amp;amv=2" target="_blank" rel="noreferrer">Join Cricket WhatsApp Group</a>
+        </aside>
+      </div>
     </section>
 
     <section id="toss" class="section-shell section-block">

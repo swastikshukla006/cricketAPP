@@ -44,3 +44,26 @@ https://cricket-app-pi-six.vercel.app/.well-known/assetlinks.json
 ```
 
 The file is matched to the PWABuilder Android package ID and signing certificate. Do not change its package name or SHA-256 fingerprint unless a new Android signing key/package is generated.
+
+
+## Web Push Notifications
+
+This build includes real Android/PWA push notifications for:
+
+- New dressing-room chat messages
+- New match fixtures and completed-match results
+- Captain announcements
+- Important live-score events (wicket, four, six and innings completion)
+- Join requests for leadership and approved-player updates
+
+### Required Vercel environment variables
+
+Add these in **Vercel → Project Settings → Environment Variables** for Production, Preview and Development:
+
+- `VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_SUBJECT` (example: `mailto:jiking847@gmail.com`)
+
+Do not place the private key in `public/`, GitHub, HTML, or frontend JavaScript. A separate private setup text file is supplied next to the ZIP.
+
+After adding the variables, redeploy once. Each player must log in and tap **Enable Notifications** on their own phone. Android will then ask for notification permission.

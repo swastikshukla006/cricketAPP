@@ -1,9 +1,10 @@
 {
   "name": "ball-kho-gayi-xi",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "private": true,
   "type": "module",
   "dependencies": {
-    "mongodb": "^6.0.0"
+    "mongodb": "^6.0.0",
+    "web-push": "^3.6.7"
   }
 }
