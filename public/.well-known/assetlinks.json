@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.cricket_app_pi_six.twa",
+        "sha256_cert_fingerprints": ["77:F3:56:FE:B4:4E:9E:B9:5E:24:A0:EF:14:A8:6C:54:D1:0E:50:81:E0:51:B8:F6:66:D5:39:3A:6B:EC:57:18"]
+      }
+    }]

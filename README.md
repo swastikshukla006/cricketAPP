@@ -28,3 +28,19 @@ Environment variables:
 - `MONGODB_DB=ball_kho_gayi_xi`
 
 Push the whole folder contents to the repository root.
+
+## Android Trusted Web Activity verification
+
+This package includes:
+
+```text
+public/.well-known/assetlinks.json
+```
+
+After deploying, verify that this URL displays JSON rather than a 404 page:
+
+```text
+https://cricket-app-pi-six.vercel.app/.well-known/assetlinks.json
+```
+
+The file is matched to the PWABuilder Android package ID and signing certificate. Do not change its package name or SHA-256 fingerprint unless a new Android signing key/package is generated.

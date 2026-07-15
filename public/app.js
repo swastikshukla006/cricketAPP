@@ -466,9 +466,11 @@
 
   function registerServiceWorker(){if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});}
 
+  registerServiceWorker();
+
   async function startApp(){
     if(localStorage.getItem('ballKhoTheme')==='dark')document.body.classList.add('dark');
-    await loadDataFromServer(); session=loadSession(); bindEvents(); renderAll(); registerServiceWorker(); setInterval(refreshFromServer,30000);
+    await loadDataFromServer(); session=loadSession(); bindEvents(); renderAll(); setInterval(refreshFromServer,30000);
   }
 
   startApp().catch((error)=>{console.error('Application startup failed:',error);toast('Could not start the app. Refresh the page.');});
