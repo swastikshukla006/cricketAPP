@@ -1,15 +1,11 @@
-# Ball Kho Gayi XI — MongoDB/Vercel Edition
+# Ball Kho Gayi XI — Static Vercel Deploy
 
-This folder is ready to be placed directly at the root of the GitHub repository used by Vercel.
+This package is for deploying the website without MongoDB.
 
-## Required Vercel environment variables
-- `MONGODB_URI`
-- `MONGODB_DB` = `ball_kho_gayi_xi`
+Vercel settings:
+- Framework Preset: Other
+- Root Directory: ./
+- Build Command: default/off
+- Output Directory: default/off (vercel.json sets it to public)
 
-## Test routes
-- `/api/ping` confirms Vercel Functions are deployed.
-- `/api/health` confirms MongoDB is connected.
-- `/api/state` reads/writes the shared team state.
-
-## Important filenames
-Keep these exact names: `index.html`, `app.js`, `package.json`, and the `api` folder.
+Upload all files and folders in this package to the repository root.
