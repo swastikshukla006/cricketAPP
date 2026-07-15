@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#173b1c" />
+  <meta name="description" content="Ball Kho Gayi XI — shared school cricket team, player dashboards, fixtures, scorecards, teams and group chat." />
+  <title>Ball Kho Gayi XI</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&display=swap" rel="stylesheet" />
+  <link rel="icon" href="assets/logo-64.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#home" aria-label="Ball Kho Gayi XI home">
+      <img id="headerLogo" src="assets/logo-64.png" alt="Ball Kho Gayi XI logo" />
+      <span><strong id="brandName">Ball Kho Gayi XI</strong><small id="brandTagline">Bat · Ball · Repeat</small></span>
+    </a>
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <a href="#matches">Matches</a>
+      <a href="#teams">Teams</a>
+      <a href="#practice">Team Maker</a>
+      <a href="#chat">Chat</a>
+      <a href="#stats">Stats</a>
+      <a href="#admin" data-admin-only>Admin</a>
+    </nav>
+    <div class="header-actions">
+      <button class="pill-btn" id="loginBtn" type="button">Log in / Join</button>
+      <button class="account-chip hidden" id="accountBtn" type="button">
+        <span class="mini-avatar" id="accountAvatar">XI</span>
+        <span><strong id="accountName">Player</strong><small id="accountRole">Member</small></span>
+      </button>
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle theme">◐</button>
+    </div>
+  </header>
+
+  <main id="home">
+    <section class="front-hero" id="frontHero">
+      <img class="front-image" id="heroImage" src="assets/cric-time-front.jpg" alt="School cricket on a green ground surrounded by hills" />
+      <div class="front-shade"></div>
+      <div class="front-content section-shell">
+        <div class="front-badge"><img id="heroLogo" src="assets/ball-kho-gayi-circle.png" alt="Ball Kho Gayi XI circular logo" /></div>
+        <div class="front-copy">
+          <p class="eyebrow">School cricket, properly remembered</p>
+          <h1 id="heroTitle">Our ground. Our squad. Our story.</h1>
+          <p id="heroSubtitle">Record matches after school, follow personal form, build practice teams and keep the whole group together.</p>
+          <div class="hero-actions">
+            <button class="primary-btn" id="heroLoginBtn" type="button">Enter Dressing Room</button>
+            <a class="glass-btn" href="#teams">See the Teams</a>
+          </div>
+        </div>
+        <div class="hero-fixture glass-panel">
+          <span>Next fixture</span>
+          <strong id="nextMatchTitle">No match scheduled</strong>
+          <small id="nextMatchMeta">Captain or admin can add one</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="quick-strip" aria-label="Team summary">
+      <div><strong id="heroPlayers">0</strong><span>Our players</span></div>
+      <div><strong id="heroMatches">0</strong><span>Matches</span></div>
+      <div><strong id="heroWins">0</strong><span>Wins</span></div>
+      <div><strong id="heroRuns">0</strong><span>Runs logged</span></div>
+    </section>
+
+    <section id="my-dashboard" class="section-shell section-block hidden">
+      <div class="section-head">
+        <div><p class="eyebrow" id="dashboardEyebrow">My Dressing Room</p><h2 id="dashboardGreeting">Welcome back</h2><p id="dashboardSubtitle">Your next fixture and personal performance.</p></div>
+        <div class="section-actions"><button class="secondary-btn small" id="editProfileBtn" type="button">Edit My Profile</button><button class="secondary-btn small" id="changePinBtn" type="button">Change PIN</button><button class="danger-btn small" id="logoutBtn" type="button">Log out</button></div>
+      </div>
+      <div class="dashboard-grid">
+        <article class="panel profile-summary">
+          <div class="profile-head"><div class="profile-photo large" id="dashboardPhoto"><span id="dashboardAvatar">XI</span></div><div><span class="role-chip" id="dashboardRole">Player</span><h3 id="dashboardName">Player</h3><p id="dashboardPlayerMeta">Jersey · Role</p><small id="dashboardPhone"></small></div></div>
+          <div class="metric-grid six"><div><b id="myMatches">0</b><span>Matches</span></div><div><b id="myRuns">0</b><span>Runs</span></div><div><b id="myWickets">0</b><span>Wickets</span></div><div><b id="myCatches">0</b><span>Catches</span></div><div><b id="myStrikeRate">0.0</b><span>Strike rate</span></div><div><b id="myEconomy">—</b><span>Economy</span></div></div>
+          <div class="rank-line"><span id="myBatRank">Batting rank —</span><span id="myBowlRank">Bowling rank —</span></div>
+        </article>
+        <article class="panel next-card"><p class="eyebrow">Your Next Match</p><h3 id="myNextMatch">No fixture</h3><p id="myNextMatchMeta" class="muted">A match will appear here when scheduled.</p><div class="countdown" id="matchCountdown">No countdown</div><p class="label">Availability</p><div class="availability-buttons" id="availabilityButtons"><button data-availability="Available">✓ Available</button><button data-availability="Maybe">? Maybe</button><button data-availability="Unavailable">× Unavailable</button></div><small id="availabilitySaved"></small></article>
+        <article class="panel"><div class="section-head compact"><div><p class="eyebrow">Recent Form</p><h3>Last performances</h3></div></div><div class="form-bars" id="recentForm"></div><div class="impact-note" id="bestPerformance">No scorecard yet.</div></article>
+        <article class="panel"><p class="eyebrow">Personal Target</p><h3>What are you working on?</h3><textarea id="personalGoalInput" rows="5" maxlength="180" placeholder="Example: score 25 runs or take two wickets"></textarea><button class="secondary-btn wide" id="saveGoalBtn" type="button">Save My Goal</button></article>
+      </div>
+      <div id="captainDashboard" class="captain-zone hidden">
+        <div class="section-head"><div><p class="eyebrow">Captain Control Room</p><h2>Team performance</h2></div><span class="status-chip">Leadership view</span></div>
+        <div class="metric-grid four"><div><b id="captainWins">0</b><span>Wins</span><small id="captainRecord">0 matches</small></div><div><b id="captainWinRate">0%</b><span>Win rate</span></div><div><b id="captainTeamRuns">0</b><span>Team runs</span></div><div><b id="captainStreak">—</b><span>Recent form</span></div></div>
+        <div class="two-col"><article class="panel"><p class="eyebrow">Squad Availability</p><h3 id="availabilityMatchTitle">Next fixture</h3><div id="captainAvailability" class="availability-list"></div></article><article class="panel"><p class="eyebrow">Season Leaders</p><div id="captainLeaders" class="leader-list"></div><div class="section-actions"><button class="primary-btn small" id="captainScheduleBtn">Schedule Match</button><button class="secondary-btn small" id="captainResultBtn">Add Result</button></div></article></div>
+      </div>
+    </section>
+
+    <section class="section-shell section-block overview-grid">
+      <article class="panel record-card"><p class="eyebrow">Season record</p><h2 id="seasonRecord">0W · 0L</h2><p>Every completed scorecard updates this automatically.</p></article>
+      <article class="panel notice-card"><p class="eyebrow">Captain’s Board</p><h3 id="announcementTitle">Carry the score notebook.</h3><p id="announcementText">Write down every run, wicket and catch so the match can be uploaded later.</p><button class="text-btn" id="editNoticeBtn" data-manager-only>Edit notice →</button></article>
+      <article class="panel leader-mini"><span>Top batter</span><strong id="topBatter">—</strong><small id="topBatterStat">0 runs</small></article>
+      <article class="panel leader-mini"><span>Top bowler</span><strong id="topBowler">—</strong><small id="topBowlerStat">0 wickets</small></article>
+    </section>
+
+    <section id="matches" class="section-shell section-block">
+      <div class="section-head"><div><p class="eyebrow">Match Center</p><h2>Fixtures and scorecards</h2></div><div class="section-actions"><button class="secondary-btn small" id="scheduleBtn" data-manager-only>Schedule Match</button><button class="primary-btn small" id="quickResultBtn" data-manager-only>Add Completed Match</button></div></div>
+      <div class="filter-row"><button class="filter active" data-match-filter="all">All</button><button class="filter" data-match-filter="Upcoming">Upcoming</button><button class="filter" data-match-filter="Completed">Completed</button></div>
+      <div id="matchGrid" class="card-grid three"></div><div id="matchEmpty" class="empty hidden">No matches here yet.</div>
+    </section>
+
+    <section id="teams" class="section-shell section-block">
+      <div class="section-head"><div><p class="eyebrow">Team Room</p><h2>Our squad and opponents</h2><p>Our players always stay under Ball Kho Gayi XI. Opponent teams and their players can change for every match.</p></div><div class="section-actions"><button class="primary-btn small" id="addOpponentTeamBtn" data-admin-only>Add Opponent Team</button></div></div>
+      <article class="our-team panel"><div class="team-title"><img id="teamSectionLogo" src="assets/ball-kho-gayi-circle.png" alt="Ball Kho Gayi XI logo" /><div><span>Our Team</span><h3 id="ourTeamName">Ball Kho Gayi XI</h3><small><b id="captainName">Swastik</b> · Captain &nbsp; <b id="viceCaptainName">Ananya</b> · Vice-Captain</small></div></div><div id="ourPlayerGrid" class="player-grid"></div></article>
+      <div class="section-head subhead"><div><p class="eyebrow">Opponent Directory</p><h3>Teams we play</h3></div></div>
+      <div id="opponentTeamGrid" class="card-grid two"></div><div id="opponentEmpty" class="empty hidden">No opponent team added yet. Admin can create teams whenever needed.</div>
+    </section>
+
+    <section id="practice" class="section-shell section-block practice-section">
+      <div class="section-head"><div><p class="eyebrow">Practice Team Maker</p><h2>Split our squad for an internal game</h2><p>Shuffle everyone into two balanced sides, then move individual players if required.</p></div><div class="section-actions"><button class="primary-btn small" id="shuffleTeamsBtn" data-manager-only>Shuffle Teams</button><button class="secondary-btn small" id="renamePracticeBtn" data-manager-only>Rename Sides</button></div></div>
+      <div class="practice-grid"><article class="practice-team panel"><span class="team-dot green"></span><h3 id="practiceNameA">Team Green</h3><div id="practiceTeamA" class="practice-list"></div></article><div class="versus">VS</div><article class="practice-team panel"><span class="team-dot gold"></span><h3 id="practiceNameB">Team Gold</h3><div id="practiceTeamB" class="practice-list"></div></article></div>
+      <p class="updated-note" id="practiceUpdated">Teams have not been distributed yet.</p>
+    </section>
+
+    <section id="chat" class="section-shell section-block">
+      <div class="section-head"><div><p class="eyebrow">Dressing Room Chat</p><h2>Group chat</h2><p>Shared through MongoDB, so messages appear on every phone.</p></div></div>
+      <div class="chat-layout"><article class="panel chat-panel"><div id="chatMessages" class="chat-messages"></div><form id="chatForm" class="chat-form"><input id="chatInput" maxlength="280" placeholder="Log in to send a message" autocomplete="off" /><button class="primary-btn small" type="submit">Send</button></form><small id="chatStatus">Player login required to post.</small></article><aside class="panel chat-rules"><p class="eyebrow">Group Rules</p><h3>Keep it about cricket.</h3><ul><li>Match timing and availability</li><li>Ground, kit and ball updates</li><li>Friendly team discussion</li></ul><p>Admin can remove any message.</p></aside></div>
+    </section>
+
+    <section id="toss" class="section-shell section-block">
+      <div class="section-head"><div><p class="eyebrow">Toss Room</p><h2>Flip before the match</h2></div></div>
+      <div class="two-col"><article class="panel form-stack"><label>Opponent<select id="tossOpponent"></select></label><label>Our call<select id="tossCall"><option>Heads</option><option>Tails</option></select></label><button class="primary-btn wide" id="flipCoinBtn">Flip Coin</button><div id="decisionButtons" class="section-actions hidden"><button class="secondary-btn small" data-decision="Bat">Bat first</button><button class="secondary-btn small" data-decision="Bowl">Bowl first</button></div><p id="tossWinnerText"></p></article><article class="panel coin-stage"><div class="coin" id="coin"><span>H</span><span>T</span></div><h3 id="coinLabel">Ready for the toss</h3><p id="savedToss">No toss saved yet.</p></article></div>
+    </section>
+
+    <section id="stats" class="section-shell section-block">
+      <div class="section-head"><div><p class="eyebrow">Statistics Lab</p><h2>Season leaderboards</h2></div><div class="filter-row"><button class="filter active" data-stat="runs">Runs</button><button class="filter" data-stat="wickets">Wickets</button><button class="filter" data-stat="catches">Catches</button><button class="filter" data-stat="strikeRate">Strike Rate</button><button class="filter" data-stat="economy">Economy</button></div></div>
+      <div class="stats-layout"><article class="panel podium" id="podium"></article><article class="panel table-wrap"><table><thead id="leaderHead"></thead><tbody id="leaderRows"></tbody></table></article></div>
+    </section>
+
+    <section id="admin" class="section-shell section-block hidden" data-admin-only>
+      <div class="section-head"><div><p class="eyebrow">Administrator</p><h2>Everything editable without code</h2><p>Change branding, leadership, players, teams and login settings here.</p></div></div>
+      <div class="admin-grid">
+        <article class="panel form-stack"><p class="eyebrow">Website Settings</p><label>Group name<input id="groupNameInput" maxlength="40" /></label><label>Tagline<input id="taglineInput" maxlength="60" /></label><label>Hero title<input id="heroTitleInput" maxlength="90" /></label><label>Hero subtitle<textarea id="heroSubtitleInput" rows="4" maxlength="240"></textarea></label><label>Home ground<input id="homeGroundInput" maxlength="80" /></label><label>Captain<select id="captainSelect"></select></label><label>Vice-captain<select id="viceCaptainSelect"></select></label><label>New admin PIN (optional)<input id="adminPinInput" inputmode="numeric" maxlength="6" placeholder="Leave blank to keep current" /></label><label>Replace hero image<input id="heroImageInput" type="file" accept="image/*" /></label><label>Replace team logo<input id="logoImageInput" type="file" accept="image/*" /></label><button class="primary-btn wide" id="saveSettingsBtn">Save Website Settings</button></article>
+        <article class="panel"><p class="eyebrow">Join Requests</p><h3>Approve new players</h3><div id="joinRequestList" class="request-list"></div></article>
+        <article class="panel"><p class="eyebrow">Squad Manager</p><h3>Our players</h3><button class="primary-btn wide" id="addPlayerBtn">Add Player Manually</button><div id="adminPlayerList" class="admin-list"></div></article>
+        <article class="panel"><p class="eyebrow">Data Tools</p><h3>MongoDB scorebook</h3><p class="muted">Changes save to the shared database and also remain available as a local backup.</p><div class="stack-actions"><button class="secondary-btn wide" id="exportBtn">Export JSON Backup</button><label class="file-btn wide">Import JSON Backup<input id="importInput" type="file" accept="application/json" /></label><button class="danger-btn wide" id="resetBtn">Reset Website Data</button></div></article>
+      </div>
+    </section>
+
+    <footer class="section-shell footer"><div class="brand footer-brand"><img id="footerLogo" src="assets/logo-64.png" alt=""><span><strong id="footerBrand">Ball Kho Gayi XI</strong><small>Bat · Ball · Repeat</small></span></div><p>Designed and developed by <strong>Swastik Shukla</strong></p><div><a href="mailto:jiking847@gmail.com">Email</a> · <a href="https://www.instagram.com/swastik_shukla__/" target="_blank" rel="noreferrer">Instagram</a></div></footer>
+  </main>
+
+  <nav class="mobile-nav"><a href="#home">⌂<span>Home</span></a><a href="#matches">▣<span>Matches</span></a><a href="#teams">♙<span>Teams</span></a><a href="#chat">◌<span>Chat</span></a><button id="mobileAccountBtn">◎<span>Account</span></button></nav>
+
+  <div class="modal" id="loginModal" aria-hidden="true"><div class="modal-box small-modal"><button class="close" data-close="loginModal">×</button><img class="modal-logo" src="assets/ball-kho-gayi-circle.png" alt=""><p class="eyebrow">Dressing Room Access</p><h2>Log in</h2><form id="loginForm" class="form-stack"><label>Account<select id="loginAccount"></select></label><label>Private PIN<input id="loginPin" type="password" inputmode="numeric" minlength="4" maxlength="6" required autocomplete="current-password" /></label><button class="primary-btn wide" type="submit">Enter</button></form><div class="join-callout"><strong>New to the team?</strong><p>Create a player request with your name, jersey, phone, photo and your own PIN.</p><button class="secondary-btn wide" id="openJoinBtn">Request to Join</button></div></div></div>
+
+  <div class="modal" id="joinModal" aria-hidden="true"><div class="modal-box"><button class="close" data-close="joinModal">×</button><p class="eyebrow">New Player</p><h2>Request to join</h2><form id="joinForm" class="form-grid"><label>Full name<input id="joinName" maxlength="40" required /></label><label>Phone number<input id="joinPhone" inputmode="tel" maxlength="15" required /></label><label>Jersey number<input id="joinJersey" type="number" min="0" max="999" required /></label><label>Choose PIN<input id="joinPin" type="password" inputmode="numeric" minlength="4" maxlength="6" required /></label><label>Primary role<select id="joinRole"><option>Batter</option><option>Bowler</option><option>All-rounder</option><option>Wicketkeeper</option></select></label><label>Class / Section<input id="joinClass" maxlength="30" placeholder="Class 10-B" /></label><label class="full">Profile photo<input id="joinPhoto" type="file" accept="image/*" /></label><label class="full">Short note<textarea id="joinNote" rows="3" maxlength="150" placeholder="Batting or bowling style"></textarea></label><button class="primary-btn full" type="submit">Send Join Request</button></form></div></div>
+
+  <div class="modal" id="profileModal" aria-hidden="true"><div class="modal-box"><button class="close" data-close="profileModal">×</button><p class="eyebrow">My Profile</p><h2>Edit details</h2><form id="profileForm" class="form-grid"><label>Full name<input id="profileName" maxlength="40" required /></label><label>Phone number<input id="profilePhone" inputmode="tel" maxlength="15" /></label><label>Jersey number<input id="profileJersey" type="number" min="0" max="999" required /></label><label>Class / Section<input id="profileClass" maxlength="30" /></label><label class="full">New profile photo<input id="profilePhoto" type="file" accept="image/*" /></label><label class="full">Player note<textarea id="profileNote" rows="3" maxlength="180"></textarea></label><button class="primary-btn full" type="submit">Save Profile</button></form></div></div>
+
+  <div class="modal" id="pinModal" aria-hidden="true"><div class="modal-box small-modal"><button class="close" data-close="pinModal">×</button><p class="eyebrow">Security</p><h2>Change PIN</h2><form id="pinForm" class="form-stack"><label>Current PIN<input id="currentPin" type="password" inputmode="numeric" required maxlength="6" /></label><label>New PIN<input id="newPin" type="password" inputmode="numeric" required minlength="4" maxlength="6" /></label><label>Confirm new PIN<input id="confirmPin" type="password" inputmode="numeric" required minlength="4" maxlength="6" /></label><button class="primary-btn wide">Update PIN</button></form></div></div>
+
+  <div class="modal" id="scheduleModal" aria-hidden="true"><div class="modal-box"><button class="close" data-close="scheduleModal">×</button><p class="eyebrow">New Fixture</p><h2>Schedule match</h2><form id="scheduleForm" class="form-grid"><label>Opponent team<select id="scheduleOpponentTeam"></select></label><label>Custom opponent name<input id="scheduleOpponent" placeholder="Used when Custom is selected" /></label><label>Venue<input id="scheduleVenue" required /></label><label>Date<input id="scheduleDate" type="date" required /></label><label>Time<input id="scheduleTime" type="time" required /></label><label>Overs<input id="scheduleOvers" type="number" min="1" max="50" value="10" required /></label><label>Ball type<select id="scheduleBall"><option>Tennis</option><option>Leather</option><option>Rubber</option></select></label><label class="full">Notes<textarea id="scheduleNotes" rows="3"></textarea></label><button class="primary-btn full">Save Fixture</button></form></div></div>
+
+  <div class="modal" id="resultModal" aria-hidden="true"><div class="modal-box large-modal"><button class="close" data-close="resultModal">×</button><p class="eyebrow">Post-Match Desk</p><h2>Upload scorecard</h2><form id="resultForm"><div class="form-grid"><label>Opponent<input id="resultOpponent" required /></label><label>Date<input id="resultDate" type="date" required /></label><label>Venue<input id="resultVenue" required /></label><label>Overs<input id="resultOvers" type="number" min="1" max="50" value="10" required /></label><label>Our score<input id="ourScore" placeholder="96/5" required /></label><label>Opponent score<input id="opponentScore" placeholder="88/7" required /></label><label>Toss winner<select id="resultTossWinner"><option>Our team</option><option>Opponent</option></select></label><label>Toss decision<select id="resultTossDecision"><option>Bat first</option><option>Bowl first</option></select></label><label>Outcome<select id="resultOutcome"><option value="win">Win</option><option value="loss">Loss</option><option value="tie">Tie</option><option value="no-result">No result</option></select></label><label>Result summary<input id="resultSummary" placeholder="Won by 8 runs" required /></label><label class="full">Notes<textarea id="resultNotes" rows="3"></textarea></label></div><h3>Our player performances</h3><div class="table-wrap"><table class="performance-table"><thead><tr><th>Player</th><th>Runs</th><th>Balls</th><th>Wkts</th><th>Overs</th><th>Conceded</th><th>Catches</th></tr></thead><tbody id="performanceRows"></tbody></table></div><button class="primary-btn wide" type="submit">Save Match and Update Stats</button></form></div></div>
+
+  <div class="modal" id="playerModal" aria-hidden="true"><div class="modal-box"><button class="close" data-close="playerModal">×</button><p class="eyebrow">Squad Manager</p><h2 id="playerModalTitle">Player</h2><form id="playerForm" class="form-grid"><input type="hidden" id="editingPlayerId" /><label>Full name<input id="playerName" required /></label><label>Phone number<input id="playerPhone" inputmode="tel" maxlength="15" /></label><label>Jersey number<input id="playerJersey" type="number" min="0" max="999" required /></label><label>Role<select id="playerRole"><option>Batter</option><option>Bowler</option><option>All-rounder</option><option>Wicketkeeper</option></select></label><label>Class<input id="playerClass" /></label><label>New PIN (optional)<input id="playerPin" type="password" inputmode="numeric" maxlength="6" /></label><label>Batting style<input id="playerBatting" /></label><label>Bowling style<input id="playerBowling" /></label><label class="full">Profile photo<input id="playerPhoto" type="file" accept="image/*" /></label><label class="full">Note<textarea id="playerNote" rows="3"></textarea></label><button class="primary-btn full">Save Player</button></form></div></div>
+
+  <div class="modal" id="opponentTeamModal" aria-hidden="true"><div class="modal-box small-modal"><button class="close" data-close="opponentTeamModal">×</button><p class="eyebrow">Opponent Directory</p><h2 id="opponentTeamModalTitle">Add team</h2><form id="opponentTeamForm" class="form-stack"><input type="hidden" id="editingOpponentTeamId" /><label>Team name<input id="opponentTeamName" maxlength="50" required /></label><label>Team colour<input id="opponentTeamColor" type="color" value="#d6a928" /></label><label>Home ground<input id="opponentTeamGround" maxlength="80" /></label><button class="primary-btn wide">Save Team</button></form></div></div>
+
+  <div class="modal" id="opponentPlayerModal" aria-hidden="true"><div class="modal-box small-modal"><button class="close" data-close="opponentPlayerModal">×</button><p class="eyebrow">Opponent Player</p><h2>Add player</h2><form id="opponentPlayerForm" class="form-grid"><input type="hidden" id="opponentPlayerTeamId" /><input type="hidden" id="editingOpponentPlayerId" /><label>Player name<input id="opponentPlayerName" required /></label><label>Jersey<input id="opponentPlayerJersey" type="number" min="0" max="999" /></label><label>Role<select id="opponentPlayerRole"><option>Batter</option><option>Bowler</option><option>All-rounder</option><option>Wicketkeeper</option></select></label><label>Note<input id="opponentPlayerNote" /></label><button class="primary-btn full">Save Player</button></form></div></div>
+
+  <div class="modal" id="practiceNameModal" aria-hidden="true"><div class="modal-box small-modal"><button class="close" data-close="practiceNameModal">×</button><p class="eyebrow">Practice Teams</p><h2>Rename sides</h2><form id="practiceNameForm" class="form-stack"><label>First side<input id="practiceNameInputA" required /></label><label>Second side<input id="practiceNameInputB" required /></label><button class="primary-btn wide">Save Names</button></form></div></div>
+
+  <div class="modal" id="noticeModal" aria-hidden="true"><div class="modal-box small-modal"><button class="close" data-close="noticeModal">×</button><p class="eyebrow">Captain’s Board</p><h2>Edit notice</h2><form id="noticeForm" class="form-stack"><label>Title<input id="noticeTitleInput" required /></label><label>Message<textarea id="noticeTextInput" rows="5" required></textarea></label><button class="primary-btn wide">Publish Notice</button></form></div></div>
+
+  <div class="modal" id="scorecardModal" aria-hidden="true"><div class="modal-box large-modal"><button class="close" data-close="scorecardModal">×</button><div id="scorecardContent"></div></div></div>
+  <div class="confirm" id="confirmDialog"><div class="confirm-box"><h3 id="confirmTitle">Are you sure?</h3><p id="confirmText"></p><div class="section-actions"><button class="secondary-btn small" id="confirmCancel">Cancel</button><button class="danger-btn small" id="confirmOk">Continue</button></div></div></div>
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
