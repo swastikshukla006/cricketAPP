@@ -417,9 +417,9 @@
 <img alt="Ball Kho Gayi XI" class="modal-logo" src="assets/ball-kho-gayi-circle.png"/>
 <p class="eyebrow">Dressing Room Access</p><h2>Log in</h2>
 <p class="login-explainer">Choose your player profile and enter its private PIN. The Administrator account has a separate PIN.</p>
-<form class="form-stack" id="loginForm">
+<form class="form-stack" id="loginForm" novalidate>
 <label>Account<select id="loginAccount" required=""></select></label>
-<label>Private PIN<div class="pin-input-wrap"><input autocomplete="current-password" id="loginPin" inputmode="numeric" maxlength="6" minlength="4" required="" type="password"/><button aria-label="Show PIN" id="toggleLoginPin" type="button">Show</button></div></label>
+<label>Private PIN<div class="pin-input-wrap pin-input-visible"><input aria-describedby="loginPinHelp" autocomplete="one-time-code" id="loginPin" inputmode="numeric" maxlength="6" pattern="[0-9]*" placeholder="Enter 4–6 digits" required type="text"/><button aria-label="Clear PIN" id="toggleLoginPin" type="button">Clear</button></div><small id="loginPinHelp">Your PIN stays on this device and is checked securely.</small></label>
 <label class="remember-login"><input checked="" id="rememberLogin" type="checkbox"/> Keep me logged in on this phone</label>
 <p aria-live="polite" class="form-message" id="loginMessage"></p>
 <button class="primary-btn wide" id="loginSubmitBtn" type="submit">Enter dressing room</button>

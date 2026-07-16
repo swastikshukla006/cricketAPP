@@ -1,0 +1,7 @@
+Ball Kho Gayi XI v13 login hotfix
+
+- Replaces hidden password PIN input with a visible numeric field.
+- Sanitizes pasted/typed input to digits only.
+- Handles login from form submit, button tap, and keyboard Enter.
+- Shows immediate progress and exact error messages.
+- Updates service-worker cache version to force automatic delivery.

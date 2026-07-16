@@ -962,32 +962,41 @@
     $$('[data-close]').forEach((b)=>b.addEventListener('click',()=>closeModal(b.dataset.close))); $$('.modal').forEach((m)=>m.addEventListener('click',(e)=>{if(e.target===m)closeModal(m.id);}));
     $('openJoinBtn').addEventListener('click',()=>{closeModal('loginModal');openModal('joinModal');});
 
-    $('loginForm').addEventListener('submit',async(e)=>{
-      e.preventDefault();
-      const account=$('loginAccount').value, pin=$('loginPin').value.trim(), message=$('loginMessage'), submit=$('loginSubmitBtn');
-      message.textContent=''; message.className='form-message';
-      if(!account){message.textContent='Choose an account first.';return;}
-      if(!validPin(pin)){message.textContent='Enter a 4–6 digit PIN.';$('loginPin').focus();return;}
-      submit.disabled=true;submit.textContent='Checking…';
+    let loginInProgress=false;
+    async function performLogin(e){
+      e?.preventDefault?.();
+      if(loginInProgress)return;
+      const account=$('loginAccount')?.value||'';
+      const pin=String($('loginPin')?.value||'').replace(/\D/g,'').slice(0,6);
+      const message=$('loginMessage'),submit=$('loginSubmitBtn');
+      if($('loginPin'))$('loginPin').value=pin;
+      message.textContent='';message.className='form-message';
+      if(!account){message.textContent='Choose an account first.';message.classList.add('error');return;}
+      if(!validPin(pin)){message.textContent='Enter a 4–6 digit PIN. Your digits should be visible in the box.';message.classList.add('error');$('loginPin')?.focus();return;}
+      loginInProgress=true;submit.disabled=true;submit.textContent='Checking PIN…';message.textContent='Checking your account…';message.classList.add('hint');
       try{
         const remember=$('rememberLogin')?.checked!==false;
         if(account==='admin'){
           const verification=await verifyStoredPin(pin,data.settings.adminPinHash);
-          if(!verification.ok){message.textContent='That is not the Administrator PIN. Captain and vice-captain should choose their player name above.';message.classList.add('error');return;}
+          if(!verification.ok){message.textContent='Incorrect Administrator PIN. Choose your captain player profile for captain access.';message.className='form-message error';return;}
           if(verification.upgradedHash){data.settings.adminPinHash=verification.upgradedHash;await saveData();}
           session={type:'admin',remember};
         }else{
           const id=account.split(':')[1],p=data.players.find((x)=>x.id===id&&x.status==='active');
-          if(!p){renderLoginOptions();message.textContent='That player account is no longer available. Choose another account.';message.classList.add('error');return;}
+          if(!p){renderLoginOptions();message.textContent='That player account is unavailable. Choose another account.';message.className='form-message error';return;}
           const verification=await verifyStoredPin(pin,p.pinHash);
-          if(!verification.ok){message.textContent=`Incorrect PIN for ${p.name}. Ask the administrator to reset it if forgotten.`;message.classList.add('error');return;}
+          if(!verification.ok){message.textContent=`Incorrect PIN for ${p.name}. Ask the administrator to reset it if forgotten.`;message.className='form-message error';return;}
           if(verification.upgradedHash){p.pinHash=verification.upgradedHash;await saveData();}
           session={type:'player',playerId:p.id,remember};
         }
-        localStorage.setItem(LAST_LOGIN_KEY,account);saveSession();$('loginPin').value='';closeModal('loginModal');renderAll();initializePushNotifications();window.BKGXIRouter?.navigate('home');toast('Welcome to the dressing room');
-      }catch(error){message.textContent='Login could not be completed. Check your connection and try again.';message.classList.add('error');console.error('Login failed:',error);}
-      finally{submit.disabled=false;submit.textContent='Enter dressing room';}
-    });
+        localStorage.setItem(LAST_LOGIN_KEY,account);saveSession();$('loginPin').value='';closeModal('loginModal');renderAll();initializePushNotifications();window.BKGXIRouter?.navigate('home');toast('Login successful');
+      }catch(error){message.textContent=`Login failed: ${error?.message||'Please try again.'}`;message.className='form-message error';console.error('Login failed:',error);}
+      finally{loginInProgress=false;submit.disabled=false;submit.textContent='Enter dressing room';}
+    }
+    $('loginForm').addEventListener('submit',performLogin);
+    $('loginSubmitBtn').addEventListener('click',performLogin);
+    $('loginPin').addEventListener('input',(e)=>{const clean=e.target.value.replace(/\D/g,'').slice(0,6);if(e.target.value!==clean)e.target.value=clean;const message=$('loginMessage');if(message?.classList.contains('error')){message.textContent='';message.className='form-message';}});
+    $('loginPin').addEventListener('keydown',(e)=>{if(e.key==='Enter')performLogin(e);});
     $('logoutBtn').addEventListener('click',()=>{session=null;saveSession();renderAll();toast('Logged out');});
 
     $('joinForm').addEventListener('submit',async(e)=>{e.preventDefault();const name=$('joinName').value.trim(),phone=$('joinPhone').value.trim(),jersey=Number($('joinJersey').value),pin=$('joinPin').value.trim();if(!validPhone(phone))return toast('Enter a valid phone number');if(!validPin(pin))return toast('PIN must contain 4–6 numbers');if(!jerseyAvailable(jersey))return toast('That jersey number is already used');if(data.joinRequests.some((r)=>r.phone.replace(/\D/g,'')===phone.replace(/\D/g,'')))return toast('A request already exists for this phone');let photo='';try{photo=await readCompressedImage($('joinPhoto').files[0]);}catch(err){return toast(err.message);}data.joinRequests.push({id:uid('request'),name,phone,jersey,role:$('joinRole').value,className:$('joinClass').value.trim()||'School Squad',note:$('joinNote').value.trim(),photo,pinHash:await hashPin(pin),createdAt:new Date().toISOString()});saveData();sendPushNotification({title:'New Ball Kho Gayi XI Join Request',body:`${name} requested to join as ${$('joinRole').value}.`,url:'/#/admin',tag:'join-request',type:'join-request',audience:'leadership'});e.target.reset();closeModal('joinModal');toast('Join request sent to Swastik admin');renderAdmin();});

@@ -59,10 +59,8 @@
   $('toggleLoginPin')?.addEventListener('click', () => {
     const input = $('loginPin');
     if (!input) return;
-    const show = input.type === 'password';
-    input.type = show ? 'text' : 'password';
-    $('toggleLoginPin').textContent = show ? 'Hide' : 'Show';
-    $('toggleLoginPin').setAttribute('aria-label', show ? 'Hide PIN' : 'Show PIN');
+    input.value = '';
+    input.dispatchEvent(new Event('input', { bubbles:true }));
     input.focus();
   });
 
@@ -80,8 +78,8 @@
   }
   $('loginAccount')?.addEventListener('change', updateLoginHint);
   document.querySelector('[data-close="loginModal"]')?.addEventListener('click', () => {
-    const input = $('loginPin'); if (input) input.type = 'password';
-    if ($('toggleLoginPin')) $('toggleLoginPin').textContent = 'Show';
+    const input = $('loginPin'); if (input) input.value = '';
+    if ($('toggleLoginPin')) $('toggleLoginPin').textContent = 'Clear';
   });
 
   function validateJersey() {

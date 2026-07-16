@@ -312,3 +312,9 @@ body.dark .app-loading-overlay{background:linear-gradient(155deg,#0f1e13,#173b1c
 }
 
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+
+/* Login reliability hotfix: visible numeric PIN and guaranteed touch target */
+.pin-input-visible input#loginPin{font-size:24px!important;font-weight:900!important;letter-spacing:.28em!important;color:var(--app-text)!important;-webkit-text-fill-color:var(--app-text)!important;caret-color:var(--app-primary)!important;background:var(--app-surface)!important;opacity:1!important;pointer-events:auto!important;touch-action:manipulation!important;min-height:54px!important;}
+.pin-input-visible input#loginPin::placeholder{font-size:14px;letter-spacing:0;color:var(--app-muted);font-weight:600;}
+#loginSubmitBtn{position:relative;z-index:3;pointer-events:auto!important;touch-action:manipulation;min-height:52px;}
+#loginPinHelp{display:block;margin-top:6px;color:var(--app-muted);font-size:11px;line-height:1.4;}
