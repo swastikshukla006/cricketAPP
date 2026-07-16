@@ -1067,8 +1067,33 @@
 
   async function registerServiceWorker(){
     if(!('serviceWorker' in navigator) || !location.protocol.startsWith('http')) return null;
-    try { pushRegistration = await navigator.serviceWorker.register('sw.js'); return pushRegistration; }
-    catch(error){ console.warn('Service worker registration failed:', error); return null; }
+    try {
+      let reloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloading || sessionStorage.getItem('bkgxi-sw-reloaded') === '1') return;
+        reloading = true;
+        sessionStorage.setItem('bkgxi-sw-reloaded', '1');
+        window.location.reload();
+      });
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type === 'APP_UPDATED') {
+          sessionStorage.removeItem('bkgxi-sw-reloaded');
+        }
+      });
+      pushRegistration = await navigator.serviceWorker.register('/sw.js?v=12', { updateViaCache: 'none' });
+      await pushRegistration.update();
+      if (pushRegistration.waiting) pushRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      pushRegistration.addEventListener('updatefound', () => {
+        const worker = pushRegistration.installing;
+        if (!worker) return;
+        worker.addEventListener('statechange', () => {
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+            worker.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+      return pushRegistration;
+    } catch(error){ console.warn('Service worker registration failed:', error); return null; }
   }
 
   registerServiceWorker();

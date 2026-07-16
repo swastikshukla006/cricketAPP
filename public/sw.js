@@ -1,4 +1,4 @@
-const CACHE = 'ball-kho-gayi-xi-v11-production';
+const CACHE = 'ball-kho-gayi-xi-v12-auto-update';
 const ASSETS = [
   './','./index.html','./styles.css','./css/tokens.css','./css/app-shell.css','./css/screens/home.css','./css/screens/matches.css','./css/final.css',
   './js/router.js','./js/final-ui.js','./js/production-ux.js','./app.js','./manifest.json','./game.html','./game.css','./game.js',
@@ -10,13 +10,17 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => event.waitUntil(
-  caches.open(CACHE).then((cache) => cache.addAll(ASSETS))
+  caches.open(CACHE)
+    .then((cache) => cache.addAll(ASSETS))
+    .then(() => self.skipWaiting())
 ));
 
 self.addEventListener('activate', (event) => event.waitUntil(
   caches.keys()
     .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
     .then(() => self.clients.claim())
+    .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+    .then((windows) => windows.forEach((client) => client.postMessage({ type: 'APP_UPDATED', cache: CACHE })))
 ));
 
 self.addEventListener('message', (event) => {

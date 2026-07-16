@@ -1,0 +1,18 @@
+BALL KHO GAYI XI — AUTOMATIC APP UPDATE FIX
+
+This build removes the need for every player to uninstall or clear app data.
+
+What changes:
+- A new service worker installs immediately.
+- Old caches are deleted automatically.
+- Open app windows are taken over automatically.
+- The app reloads once after the new version activates.
+- Vercel is instructed not to serve stale HTML, JavaScript, CSS or service-worker files.
+
+Expected player experience:
+1. Deploy this build once.
+2. Players open the installed app while connected to the internet.
+3. The app checks for the update and reloads once.
+4. The new interface appears.
+
+Some Android browsers may require closing and reopening the app once, but no uninstall or storage clearing should be needed.
