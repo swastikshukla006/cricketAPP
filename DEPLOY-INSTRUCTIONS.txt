@@ -1,20 +1,28 @@
-BALL KHO GAYI XI — FINAL DEPLOYMENT
+BALL KHO GAYI XI — PRODUCTION v7 DEPLOYMENT
 
-1. Extract this ZIP into your GitHub project folder and allow files to be replaced.
-2. Keep your existing Vercel environment variables:
+1. Make a backup of the current GitHub branch.
+2. Extract this ZIP into the repository root and replace matching files.
+3. Keep the existing Vercel variables:
    MONGODB_URI
    MONGODB_DB
    VAPID_PUBLIC_KEY
    VAPID_PRIVATE_KEY
    VAPID_SUBJECT
-3. Run from the project folder:
+4. Optional: add GAME_SCORE_SALT with a long private random value.
+5. Push a Preview branch first:
 
+   git checkout -b production-v7-preview
    git add -A
-   git commit -m "Release final Ball Kho Gayi XI app"
-   git push
+   git commit -m "Release Ball Kho Gayi XI production v7"
+   git push -u origin production-v7-preview
 
-4. Wait until the new Vercel deployment shows READY.
-5. Open the site once in Chrome, then close and reopen the Android app.
-6. Test Home, Matches, Squad, Chat, Profile, Admin and Boundary Blitz.
+6. Test login, profile editing, chat, Toss permissions and Boundary Blitz.
+7. Merge the tested branch into main to publish Production.
+8. Once Production is READY, close and reopen the installed app. Use the in-app Update now prompt when shown.
 
-Do not upload any private VAPID setup file or .env file to GitHub.
+LOGIN NOTE
+- Captain and vice-captain must choose their PLAYER name in the account list.
+- Administrator is a separate account with a separate PIN.
+- Existing PINs are not changed or reset by this package.
+
+Do not upload .env files, signing keys, VAPID private keys or GAME_SCORE_SALT to GitHub.

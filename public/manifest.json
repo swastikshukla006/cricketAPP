@@ -62,7 +62,7 @@
       "name": "Boundary Blitz",
       "short_name": "Game",
       "description": "Play the team high-score cricket game",
-      "url": "/#/game",
+      "url": "/game.html",
       "icons": [
         {
           "src": "assets/ui-icons/game.png",

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#07110e" />
+  <meta name="description" content="Boundary Blitz - a fast cricket batting game for Ball Kho Gayi XI." />
+  <title>Boundary Blitz | Ball Kho Gayi XI</title>
+  <link rel="stylesheet" href="./game.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="game-header">
+      <a class="back-link" href="/#/home" aria-label="Back to Ball Kho Gayi XI">← Team HQ</a>
+      <div class="brand">
+        <img class="brand-logo" src="./assets/logo-64.png" alt="Ball Kho Gayi XI logo" />
+        <div><strong>BOUNDARY BLITZ</strong><small>Ball Kho Gayi XI Arcade</small></div>
+      </div>
+      <button id="soundBtn" class="icon-btn" type="button" aria-label="Toggle sound">🔊</button>
+    </header>
+
+    <main>
+      <section id="menuScreen" class="screen active">
+        <div class="hero-copy">
+          <p class="eyebrow">TAP. TIME. SMASH.</p>
+          <h1>How many can you score in two overs?</h1>
+          <p>Watch the ball, wait for the sweet spot, then tap <b>SWING</b>. Perfect timing builds a multiplier. Miss three times and your innings is over.</p>
+        </div>
+
+        <div class="menu-card">
+          <label for="playerName">Player name</label>
+          <input id="playerName" maxlength="24" autocomplete="nickname" placeholder="Enter your name" />
+          <small id="playerIdentityHint" class="identity-hint">Log in on Team HQ to save under your player profile.</small>
+          <button id="playBtn" class="primary-btn" type="button">Play Boundary Blitz</button>
+          <button id="howBtn" class="secondary-btn" type="button">How to Play</button>
+          <button id="menuLeaderboardBtn" class="secondary-btn" type="button">View Leaderboard</button>
+          <p id="menuMessage" class="status-text" aria-live="polite"></p>
+        </div>
+
+        <div class="quick-stats">
+          <div><small>Your best</small><strong id="personalBest">0</strong></div>
+          <div><small>Game length</small><strong>12 balls</strong></div>
+          <div><small>Wickets</small><strong>3 max</strong></div>
+        </div>
+      </section>
+
+      <section id="gameScreen" class="screen">
+        <div class="score-strip">
+          <div><small>SCORE</small><strong id="score">0</strong></div>
+          <div><small>BALLS</small><strong id="balls">0/12</strong></div>
+          <div><small>WICKETS</small><strong id="wickets">0/3</strong></div>
+          <div><small>MULTI</small><strong id="multiplier">x1</strong></div>
+        </div>
+
+        <div id="gameStage" class="game-stage" aria-label="Cricket batting game">
+          <canvas id="gameCanvas"></canvas>
+          <div id="resultBurst" class="result-burst" aria-live="polite"></div>
+          <div id="countdown" class="countdown"></div>
+          <button id="pauseBtn" class="pause-btn" type="button" aria-label="Pause game">Ⅱ</button>
+        </div>
+
+        <div class="timing-panel">
+          <div class="timing-track">
+            <span class="danger-zone"></span>
+            <span class="good-zone"></span>
+            <span class="perfect-zone"></span>
+            <span id="timingMarker" class="timing-marker"></span>
+          </div>
+          <div class="timing-labels"><span>EARLY</span><span>PERFECT</span><span>LATE</span></div>
+        </div>
+
+        <button id="swingBtn" class="swing-btn" type="button">
+          <span>SWING</span><small>Tap anywhere or press Space</small>
+        </button>
+
+        <div class="innings-feed" id="inningsFeed" aria-label="Ball by ball results"></div>
+      </section>
+
+      <section id="resultScreen" class="screen">
+        <div class="result-card">
+          <p class="eyebrow">INNINGS COMPLETE</p>
+          <h2 id="resultTitle">Well played!</h2>
+          <div class="final-score"><strong id="finalScore">0</strong><span>runs</span></div>
+          <div class="result-grid">
+            <div><small>Boundaries</small><strong id="finalBoundaries">0</strong></div>
+            <div><small>Best combo</small><strong id="finalCombo">x1</strong></div>
+            <div><small>Perfect shots</small><strong id="finalPerfects">0</strong></div>
+          </div>
+          <p id="saveStatus" class="status-text" aria-live="polite"></p>
+          <button id="replayBtn" class="primary-btn" type="button">Play Again</button>
+          <button id="leaderboardBtn" class="secondary-btn" type="button">View Leaderboard</button>
+          <button id="shareScoreBtn" class="secondary-btn" type="button">Share Score</button>
+          <a class="text-link" href="/#/home">Return to Team HQ</a>
+        </div>
+      </section>
+
+      <section id="leaderboardScreen" class="screen">
+        <div class="section-heading">
+          <div><p class="eyebrow">TOP BATTERS</p><h2>Boundary Blitz Leaderboard</h2></div>
+          <button id="closeLeaderboardBtn" class="icon-btn" type="button" aria-label="Close leaderboard">×</button>
+        </div>
+        <div class="leaderboard-tabs">
+          <button class="tab active" data-board="global" type="button">Global</button>
+          <button class="tab" data-board="local" type="button">This Device</button>
+        </div>
+        <div id="leaderboardList" class="leaderboard-list"></div>
+        <button id="boardPlayBtn" class="primary-btn" type="button">Play Now</button>
+      </section>
+
+      <dialog id="howDialog">
+        <button id="closeHowBtn" class="dialog-close" type="button">×</button>
+        <p class="eyebrow">HOW TO PLAY</p>
+        <h2>Time every shot</h2>
+        <ol>
+          <li>The marker moves from early to late as the ball reaches you.</li>
+          <li>Tap <b>SWING</b>, the game area, or press <b>Space</b>.</li>
+          <li>Perfect timing scores 6. Good timing scores 4 or 2.</li>
+          <li>Bad timing may give a dot ball or cost a wicket.</li>
+          <li>Consecutive boundaries increase your score multiplier.</li>
+        </ol>
+        <button id="dialogPlayBtn" class="primary-btn" type="button">Got It - Play</button>
+      </dialog>
+
+      <div id="pauseOverlay" class="pause-overlay hidden">
+        <div>
+          <h2>Game Paused</h2>
+          <button id="resumeBtn" class="primary-btn" type="button">Resume</button>
+          <button id="quitBtn" class="secondary-btn" type="button">Quit Innings</button>
+        </div>
+      </div>
+    </main>
+  </div>
+  <div id="networkBadge" class="network-badge" aria-live="polite"></div>
+  <script src="./game.js" defer></script>
+</body>
+</html>

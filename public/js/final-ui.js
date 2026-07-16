@@ -110,7 +110,7 @@
           ${!completed && app.canScore() ? `<button class="primary-btn" type="button" data-match-action="live" data-match-id="${esc(match.id)}">${live ? 'Open live scorer' : 'Start live scoring'}</button>` : ''}
           ${!completed && app.canManage() ? `<button class="secondary-btn" type="button" data-match-action="result" data-match-id="${esc(match.id)}">Add result</button>` : ''}
           <button class="secondary-btn" type="button" data-match-action="share" data-match-id="${esc(match.id)}">Share match</button>
-          ${!completed ? `<button class="secondary-btn" type="button" data-match-action="toss" data-match-id="${esc(match.id)}">Toss room</button>` : ''}
+          ${!completed && app.canManage() ? `<button class="secondary-btn" type="button" data-match-action="toss" data-match-id="${esc(match.id)}">Toss room</button>` : ''}
           ${app.isAdmin() ? `<button class="danger-btn" type="button" data-match-action="delete" data-match-id="${esc(match.id)}">Delete match</button>` : ''}
         </div>
       </article>
@@ -186,113 +186,25 @@
   }
 
   /* Boundary Blitz */
-  const game = {
-    canvas:null, ctx:null, running:false, animation:0, lastTime:0, score:0, lives:3, batX:295,
-    batWidth:130, batHeight:24, batY:735, left:false, right:false, ball:null, particles:[], message:'', messageLife:0
-  };
+  let leaderboardLoading = false;
 
-  function resetBall(speedBoost = 0) {
-    game.ball = { x:75 + Math.random()*570, y:-30, r:16, vy:245 + Math.min(250, game.score*3.1) + speedBoost, spin:(Math.random()-.5)*7 };
-  }
-
-  function resizeGameGeometry() {
-    if (!game.canvas) return;
-    game.batY = game.canvas.height - 78;
-    game.batX = Math.min(game.canvas.width - game.batWidth, Math.max(0, game.batX));
-  }
-
-  function drawRoundedRect(ctx,x,y,w,h,r,fill,stroke) {
-    ctx.beginPath(); ctx.roundRect(x,y,w,h,r); if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}
-  }
-
-  function drawGame() {
-    const canvas=game.canvas, ctx=game.ctx; if(!canvas||!ctx)return;
-    const w=canvas.width,h=canvas.height;
-    const dark=document.body.classList.contains('dark');
-    const sky=ctx.createLinearGradient(0,0,0,h*.38);sky.addColorStop(0,dark?'#13283b':'#8ed4ff');sky.addColorStop(1,dark?'#254759':'#d7f1ff');ctx.fillStyle=sky;ctx.fillRect(0,0,w,h*.38);
-    const grass=ctx.createLinearGradient(0,h*.38,0,h);grass.addColorStop(0,dark?'#24482d':'#73b85e');grass.addColorStop(1,dark?'#132b1c':'#3e8d43');ctx.fillStyle=grass;ctx.fillRect(0,h*.38,w,h*.62);
-    // crowd and boundary
-    ctx.fillStyle=dark?'#101923':'#30475b';ctx.fillRect(0,h*.29,w,38);
-    for(let x=8;x<w;x+=18){ctx.fillStyle=`hsl(${(x*3)%360} 55% ${dark?45:62}%)`;ctx.beginPath();ctx.arc(x,h*.31,5,0,Math.PI*2);ctx.fill();}
-    ctx.strokeStyle='rgba(255,255,255,.72)';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(w/2,h*.68,w*.46,h*.25,0,0,Math.PI*2);ctx.stroke();
-    // pitch
-    ctx.fillStyle=dark?'#8b754f':'#d9bc82';ctx.fillRect(w*.39,h*.38,w*.22,h*.55);
-    for(let y=h*.4;y<h*.9;y+=26){ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(w*.39,y,w*.22,10);}
-    // wickets
-    ctx.strokeStyle=dark?'#eee2be':'#fff4d6';ctx.lineWidth=7;ctx.lineCap='round';
-    for(const x of [w/2-20,w/2,w/2+20]){ctx.beginPath();ctx.moveTo(x,h*.42);ctx.lineTo(x,h*.50);ctx.stroke();}
-    ctx.beginPath();ctx.moveTo(w/2-26,h*.43);ctx.lineTo(w/2+26,h*.43);ctx.stroke();
-    // bat
-    const batGradient=ctx.createLinearGradient(game.batX,0,game.batX+game.batWidth,0);batGradient.addColorStop(0,'#d9a95c');batGradient.addColorStop(.5,'#fff0b9');batGradient.addColorStop(1,'#c98b3c');
-    drawRoundedRect(ctx,game.batX,game.batY,game.batWidth,game.batHeight,10,batGradient,'rgba(60,35,8,.4)');
-    ctx.fillStyle='#2c5b38';ctx.fillRect(game.batX+game.batWidth*.38,game.batY-25,game.batWidth*.24,28);
-    // ball
-    if(game.ball){ctx.save();ctx.translate(game.ball.x,game.ball.y);ctx.rotate(game.ball.spin);ctx.fillStyle='#e6433d';ctx.beginPath();ctx.arc(0,0,game.ball.r,0,Math.PI*2);ctx.fill();ctx.strokeStyle='white';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,game.ball.r*.68,-1.15,1.15);ctx.stroke();ctx.beginPath();ctx.arc(0,0,game.ball.r*.68,Math.PI-1.15,Math.PI+1.15);ctx.stroke();ctx.restore();}
-    // particles
-    game.particles.forEach((p)=>{ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;
-    if(!game.running){ctx.fillStyle='rgba(5,18,10,.48)';ctx.fillRect(0,0,w,h);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='800 36px DM Sans';ctx.fillText(game.score?'Innings Over':'Boundary Blitz',w/2,h/2-16);ctx.font='600 18px DM Sans';ctx.fillText(game.score?`Final score: ${game.score}`:'Move the bat and time the ball',w/2,h/2+22);}
-    if(game.messageLife>0){ctx.globalAlpha=Math.min(1,game.messageLife*2);ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=5;ctx.textAlign='center';ctx.font='900 46px DM Sans';ctx.strokeText(game.message,w/2,h*.24);ctx.fillText(game.message,w/2,h*.24);ctx.globalAlpha=1;}
-  }
-
-  function spawnParticles(x,y,points){
-    const colors=points===6?['#ffd95a','#ff9e4b','#fff4b7']:['#ffffff','#d6ffae','#ffe891'];
-    for(let i=0;i<18;i++)game.particles.push({x,y,vx:(Math.random()-.5)*280,vy:-80-Math.random()*240,r:3+Math.random()*5,life:1,color:colors[i%colors.length]});
-  }
-
-  function updateGame(dt) {
-    if (!game.running || !game.ball) return;
-    const moveSpeed=430;
-    if(game.left)game.batX-=moveSpeed*dt;if(game.right)game.batX+=moveSpeed*dt;
-    game.batX=Math.max(8,Math.min(game.canvas.width-game.batWidth-8,game.batX));
-    game.ball.y+=game.ball.vy*dt;game.ball.spin+=dt*3;
-    const hitY=game.batY-game.ball.r;
-    if(game.ball.y>=hitY&&game.ball.y<=game.batY+game.batHeight&&game.ball.x>=game.batX-game.ball.r&&game.ball.x<=game.batX+game.batWidth+game.ball.r){
-      const centre=game.batX+game.batWidth/2;const offset=Math.abs(game.ball.x-centre)/(game.batWidth/2);const points=offset<.25?6:offset<.62?4:2;
-      game.score+=points;game.message=`+${points}`;game.messageLife=.75;spawnParticles(game.ball.x,game.batY,points);resetBall(18);
-      updateGameHud();
-    } else if(game.ball.y>game.canvas.height+game.ball.r){
-      game.lives-=1;game.message='Miss';game.messageLife=.75;updateGameHud();
-      if(game.lives<=0)endGame();else resetBall();
+  async function renderGameLeaderboardPreview() {
+    const root = $('homeGameLeader');
+    if (!root || leaderboardLoading) return;
+    leaderboardLoading = true;
+    try {
+      const response = await fetch('/api/game-leaderboard?limit=5', { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Leaderboard unavailable');
+      const leaders = Array.isArray(payload.scores) ? payload.scores : [];
+      root.innerHTML = leaders.length
+        ? leaders.map((entry, index) => `<div class="mini-game-rank"><b>${index + 1}</b><span>${esc(entry.name || 'Player')}</span><strong>${Number(entry.score || 0)}</strong></div>`).join('')
+        : '<p class="muted">No score yet. Be the first player on the board.</p>';
+    } catch (error) {
+      root.innerHTML = '<p class="muted">Leaderboard will appear when the connection is restored.</p>';
+    } finally {
+      leaderboardLoading = false;
     }
-    game.particles.forEach((p)=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=360*dt;p.life-=dt*1.5;});game.particles=game.particles.filter((p)=>p.life>0);
-    game.messageLife=Math.max(0,game.messageLife-dt);
-  }
-
-  function gameLoop(time){
-    const dt=Math.min(.034,(time-game.lastTime)/1000||0);game.lastTime=time;updateGame(dt);drawGame();if(game.running)game.animation=requestAnimationFrame(gameLoop);
-  }
-
-  function updateGameHud(){
-    if($('gameScore'))$('gameScore').textContent=game.score;if($('gameLives'))$('gameLives').textContent=game.lives;
-    const localBest=Number(localStorage.getItem('bkgxiBoundaryBlitzBest')||0);if($('gamePersonalBest'))$('gamePersonalBest').textContent=Math.max(localBest,game.score);
-  }
-
-  function startGame(){
-    if(!game.canvas)return;cancelAnimationFrame(game.animation);game.running=true;game.score=0;game.lives=3;game.batX=(game.canvas.width-game.batWidth)/2;game.particles=[];game.message='';game.messageLife=0;resetBall();updateGameHud();$('gameStatus').textContent='Use the arrows, keyboard or drag the bat. Sweet-spot hits score six.';$('gameStartBtn').textContent='Restart';game.lastTime=performance.now();game.animation=requestAnimationFrame(gameLoop);
-  }
-
-  async function endGame(){
-    game.running=false;cancelAnimationFrame(game.animation);drawGame();const previous=Number(localStorage.getItem('bkgxiBoundaryBlitzBest')||0);if(game.score>previous)localStorage.setItem('bkgxiBoundaryBlitzBest',String(game.score));updateGameHud();
-    const player=currentPlayer();
-    if(player&&game.score>0){const state=data();state.gameScores=Array.isArray(state.gameScores)?state.gameScores:[];state.gameScores.push({id:app.uid('game'),playerId:player.id,playerName:player.name,score:game.score,createdAt:new Date().toISOString()});state.gameScores=state.gameScores.sort((a,b)=>Number(b.score)-Number(a.score)).slice(0,50);try{await app.saveData();}catch{/* saveData already reports failures */}}
-    renderGameLeaderboard();$('gameStatus').textContent=player?`Score saved: ${game.score}. Press Restart for another innings.`:`Final score: ${game.score}. Log in to join the team leaderboard.`;
-  }
-
-  function renderGameLeaderboard(){
-    const state=data();const scores=Array.isArray(state.gameScores)?state.gameScores:[];const bestByPlayer=new Map();scores.forEach((item)=>{const key=item.playerId||item.playerName;if(!bestByPlayer.has(key)||Number(item.score)>Number(bestByPlayer.get(key).score))bestByPlayer.set(key,item);});const leaders=[...bestByPlayer.values()].sort((a,b)=>Number(b.score)-Number(a.score)).slice(0,10);
-    $('gameLeaderboard').innerHTML=leaders.length?leaders.map((entry,index)=>`<div class="game-rank"><b>${index+1}</b><div><strong>${esc(entry.playerName||'Player')}</strong><small>${entry.createdAt?esc(app.formatDate(entry.createdAt.slice(0,10))):'Team score'}</small></div><span>${Number(entry.score||0)}</span></div>`).join(''):'<div class="premium-empty" style="padding:24px 12px"><img src="assets/ui-icons/trophy.png" alt=""><h2>No high scores yet</h2><p>Be the first player on the board.</p></div>';
-    updateGameHud();
-  }
-
-  function initGame(){
-    game.canvas=$('gameCanvas');if(!game.canvas)return;game.ctx=game.canvas.getContext('2d');resizeGameGeometry();resetBall();drawGame();renderGameLeaderboard();
-    const move=(direction,active)=>{game[direction]=active;};
-    [['gameLeftBtn','left'],['gameRightBtn','right']].forEach(([id,direction])=>{const button=$(id);button.addEventListener('pointerdown',(e)=>{e.preventDefault();move(direction,true);button.setPointerCapture?.(e.pointerId);});['pointerup','pointercancel','pointerleave'].forEach((event)=>button.addEventListener(event,()=>move(direction,false)));});
-    $('gameStartBtn').addEventListener('click',startGame);
-    game.canvas.addEventListener('pointermove',(event)=>{if(!game.running||event.buttons===0)return;const rect=game.canvas.getBoundingClientRect();const x=(event.clientX-rect.left)*(game.canvas.width/rect.width);game.batX=Math.max(8,Math.min(game.canvas.width-game.batWidth-8,x-game.batWidth/2));});
-    game.canvas.addEventListener('pointerdown',(event)=>{if(!game.running)return;const rect=game.canvas.getBoundingClientRect();const x=(event.clientX-rect.left)*(game.canvas.width/rect.width);game.batX=Math.max(8,Math.min(game.canvas.width-game.batWidth-8,x-game.batWidth/2));game.canvas.setPointerCapture?.(event.pointerId);});
-    window.addEventListener('keydown',(event)=>{if(router.current()!=='game')return;if(event.key==='ArrowLeft'){game.left=true;event.preventDefault();}if(event.key==='ArrowRight'){game.right=true;event.preventDefault();}if(event.key===' '&&!game.running){startGame();event.preventDefault();}});
-    window.addEventListener('keyup',(event)=>{if(event.key==='ArrowLeft')game.left=false;if(event.key==='ArrowRight')game.right=false;});
   }
 
   function shareMatch(match) {
@@ -303,7 +215,7 @@
   }
 
   function renderExtras(){
-    renderSquadFilters();renderAdminOverview();renderUnreadBadge();renderGameLeaderboard();
+    renderSquadFilters();renderAdminOverview();renderUnreadBadge();renderGameLeaderboardPreview();
     const route=router.current();if(route==='match')renderMatchDetails();if(route==='player')renderPlayerDetails();if(route.startsWith('admin'))activateAdminPanel(panelFromRoute(route));
     const announcementIcon=document.querySelector('.home-announcement-icon');if(announcementIcon)announcementIcon.innerHTML='<img src="assets/ui-icons/web.png" alt="">';
   }
@@ -320,12 +232,12 @@
       if(target.dataset.squadAction==='practice'){router.navigate('practice');return;}
       if(target.dataset.detailBack){router.navigate(target.dataset.detailBack);return;}
       if(target.dataset.adminPanelTarget){const panel=target.dataset.adminPanelTarget;const routes={overview:'admin',teams:'admin-teams',players:'admin-players',settings:'admin-settings'};router.navigate(routes[panel]);return;}
-      if(target.dataset.adminAction){const action=target.dataset.adminAction;if(action==='schedule')app.openModal('scheduleModal');else if(action==='live')app.openLiveSetup();else if(action==='result')app.openResultModal();else router.navigate(action);return;}
+      if(target.dataset.adminAction){const action=target.dataset.adminAction;if(action==='schedule')app.openModal('scheduleModal');else if(action==='live')app.openLiveSetup();else if(action==='result')app.openResultModal();else if(action==='game')window.location.href='/game.html';else router.navigate(action);return;}
       if(target.id==='profileQuickEditBtn'||target.id==='profilePhotoShortcut'){app.openProfileModal();return;}
-      if(target.dataset.profileAction){const action=target.dataset.profileAction;if(action==='game')router.navigate('game');else if(action==='theme')app.toggleTheme();else if(action==='notifications'){router.navigate('chat');setTimeout(()=>{$('chatToolsPanel')?.classList.add('open');},100);}else if(action==='admin'){router.navigate(app.isAdmin()?'admin':'live-scoring');}return;}
+      if(target.dataset.profileAction){const action=target.dataset.profileAction;if(action==='game')window.location.href='/game.html';else if(action==='theme')app.toggleTheme();else if(action==='notifications'){router.navigate('chat');setTimeout(()=>{$('chatToolsPanel')?.classList.add('open');},100);}else if(action==='admin'){router.navigate(app.isAdmin()?'admin':'live-scoring');}return;}
       if(target.id==='chatInfoToggle'){$('chatToolsPanel')?.classList.toggle('open');return;}
       if(target.dataset.matchAvailability){const player=currentPlayer();if(!player)return app.openModal('loginModal');const state=data();state.availability[target.dataset.matchId]=state.availability[target.dataset.matchId]||{};state.availability[target.dataset.matchId][player.id]=target.dataset.matchAvailability;app.saveData();app.renderAll();renderMatchDetails(target.dataset.matchId);app.toast(`Availability: ${target.dataset.matchAvailability}`);return;}
-      if(target.dataset.matchAction){const state=data(),match=state.matches.find((item)=>item.id===target.dataset.matchId);if(!match)return;const action=target.dataset.matchAction;if(action==='live')app.openLiveSetup(match.id);else if(action==='result')app.openResultModal(match.id);else if(action==='toss')router.navigate('toss');else if(action==='share')shareMatch(match);else if(action==='delete')app.askConfirm('Delete this match?','The fixture and its scorecard will be removed.',()=>{state.matches=state.matches.filter((item)=>item.id!==match.id);app.saveData();app.renderAll();router.navigate('matches');app.toast('Match deleted');});return;}
+      if(target.dataset.matchAction){const state=data(),match=state.matches.find((item)=>item.id===target.dataset.matchId);if(!match)return;const action=target.dataset.matchAction;if(action==='live')app.openLiveSetup(match.id);else if(action==='result')app.openResultModal(match.id);else if(action==='toss'){if(!app.canManage())return app.toast('Toss is available only to the captain and vice-captain.');router.navigate('toss');}else if(action==='share')shareMatch(match);else if(action==='delete')app.askConfirm('Delete this match?','The fixture and its scorecard will be removed.',()=>{state.matches=state.matches.filter((item)=>item.id!==match.id);app.saveData();app.renderAll();router.navigate('matches');app.toast('Match deleted');});return;}
       if(target.dataset.playerAction==='edit'){const player=currentPlayer();if(app.isAdmin())app.openPlayerModal(target.dataset.playerId);else if(player?.id===target.dataset.playerId)app.openProfileModal();return;}
     });
 
@@ -333,7 +245,6 @@
       const {route,param}=event.detail||{};
       if(route==='match')renderMatchDetails(param);if(route==='player')renderPlayerDetails(param);if(route.startsWith('admin'))activateAdminPanel(panelFromRoute(route));
       if(route==='chat'){const latest=data().chat.at(-1)?.createdAt||'';if(latest)localStorage.setItem('bkgxiChatLastSeen',latest);$('chatToolsPanel')?.classList.remove('open');}
-      if(route!=='game'&&game.running){game.running=false;cancelAnimationFrame(game.animation);drawGame();$('gameStatus').textContent='Game paused. Press Restart to play again.';}
       renderUnreadBadge();
     });
     window.addEventListener('bkgxi:render',renderExtras);
@@ -368,7 +279,6 @@
   }
 
   bindFinalEvents();
-  initGame();
   setupUpdatePrompt();
   setTimeout(renderExtras,0);
 })();

@@ -33,7 +33,7 @@ export default async function handler(request, response) {
 
   try {
     configureWebPush();
-    const title = cleanText(request.body?.title, 80) || 'CricCircle';
+    const title = cleanText(request.body?.title, 80) || 'Ball Kho Gayi XI';
     const body = cleanText(request.body?.body, 220);
     if (!body) return response.status(400).json({ ok: false, error: 'Notification text is required.' });
 

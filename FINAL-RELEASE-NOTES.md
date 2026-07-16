@@ -1,41 +1,61 @@
-# Final Release Notes
+# Final Production Release Notes — v7.0
 
-## Product redesign
+## Login and account access
 
-- Converted the long-page experience into routed, focused app views.
-- Added a stable five-item bottom navigation: Home, Matches, Squad, Chat and Profile.
-- Added dedicated Match Details and Player Profile screens.
-- Split administration into Dashboard, Teams, Players and Settings panels.
-- Made profile editing and profile-photo changes available from the top of Profile.
-- Kept push-notification controls visible on mobile and inside the Android app.
-- Applied the supplied icon artwork throughout navigation, cards, actions, empty states and utilities.
+- Player profiles are listed before the separate Administrator account.
+- Captain is selected by default instead of remembering an old Administrator selection.
+- Added clear Player versus Administrator guidance, inline errors, a PIN visibility toggle and persistent-login control.
+- Existing PIN hashes and authentication rules are preserved.
 
-## Game
+## Product and usability improvements
 
-Boundary Blitz includes:
+- Focused routed views with fixed Home, Matches, Squad, Chat and Profile navigation.
+- Prominent Boundary Blitz card on Home plus shortcuts from Profile and Admin.
+- Easier full-screen mobile profile editor with photo preview, jersey validation, unsaved-change protection and clear save feedback.
+- Loading overlay, connection state, save state, offline feedback and conflict warnings.
+- Accessible modal focus handling, stronger keyboard focus, larger touch targets and reduced-motion support.
+- Visible service-worker update prompt for the installed web app/APK.
 
-- Touch drag and left/right controls
-- Keyboard arrow support
-- 2, 4 and 6-run timing zones
-- Three lives and increasing ball speed
-- Local personal best
-- Team leaderboard saved through the existing MongoDB state API
+## Chat
 
-## Compatibility
+- Optimistic message display with Sending and Retry states.
+- Date separators, connection state and jump-to-latest control.
+- Messages save locally when offline and clearly report sync failures.
 
-- No API endpoint renamed.
-- No authentication flow changed.
-- No existing MongoDB field removed.
-- Existing PWA, push notification and Android asset-link configuration preserved.
-- Service-worker cache version: `ball-kho-gayi-xi-v10-final`.
+## Boundary Blitz
 
-## Validation completed
+The old embedded mini-game has been replaced by the supplied two-over timing game in `public/game.html`.
 
-- JavaScript syntax validation for frontend, service worker and API files
-- HTML ID integrity and duplicate-ID validation
-- Every JavaScript-referenced DOM ID verified
-- CSS parser validation
-- HTML/CSS/service-worker asset reference validation
-- Backend API, package and Vercel configuration diffed against the approved Phase 4 base and confirmed unchanged
+- 12-ball innings, three wickets, timing zones and score multipliers.
+- Pause/resume, sound preference, replay and score sharing.
+- Logged-in player identity is loaded automatically.
+- Device scores work offline and pending scores retry after reconnecting.
+- Global MongoDB leaderboard stores each player's best innings.
+- New endpoints: `POST /api/game-score` and `GET /api/game-leaderboard`.
+- Submission validation, duplicate protection and basic rate limiting are included.
 
-A full browser preview could not be executed inside the build container because its Chromium policy blocks local addresses. Deploy to a Vercel Preview first for final visual/device acceptance before promoting the same commit to Production.
+## Permissions
+
+- Toss controls and the Toss route are hidden and blocked for ordinary players.
+- Toss remains available to the captain, vice-captain and the administrator/captain account.
+
+## Data protection
+
+- Existing endpoint names and MongoDB state fields remain compatible.
+- `PUT /api/state` now optionally accepts `baseUpdatedAt` and rejects stale writes with HTTP 409 instead of silently overwriting newer team data.
+- Old clients that do not send `baseUpdatedAt` remain compatible.
+- Game scores use a separate `game_scores` collection, avoiding contention with chat, profiles and live scoring.
+
+## Cache version
+
+`ball-kho-gayi-xi-v11-production`
+
+## Validation performed
+
+- JavaScript syntax checks for all frontend, service-worker and API files.
+- Duplicate HTML ID check.
+- JavaScript-to-DOM ID reference check.
+- CSS brace and asset-reference checks.
+- Manifest and service-worker asset verification.
+
+A real Vercel Preview on one phone remains the final visual/device acceptance step before promoting the commit to Production.

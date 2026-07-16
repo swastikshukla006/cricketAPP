@@ -1,89 +1,89 @@
-# Ball Kho Gayi XI — Final Production Release
+# Ball Kho Gayi XI — Production Release v7.0
 
-A mobile-first cricket team application built with vanilla HTML, CSS and JavaScript, MongoDB Atlas and Vercel Functions.
+A mobile-first cricket team application using vanilla HTML/CSS/JavaScript, Vercel Functions and MongoDB Atlas.
 
-## Final application
+## Main screens
 
-The app is now organized as focused screens instead of one endless webpage:
+- Home: live match, next fixture, result, announcements, role-based actions and Boundary Blitz
+- Matches and dedicated Match Details
+- Squad and Player Profiles
+- Chat with push-notification controls
+- Profile with easy editing, availability, goal, PIN and preferences
+- Admin dashboard, teams, players, join requests, live scoring and settings
+- Practice Team Maker, season statistics and leadership-only Toss Room
+- Boundary Blitz game with local/offline scores and a MongoDB leaderboard
 
-- **Home:** live match, next fixture, recent result, announcement and role-based quick actions
-- **Matches:** upcoming/completed tabs, dedicated match details, availability and scorecards
-- **Squad:** search, role filters, player cards, player profiles and leaderboards
-- **Chat:** MongoDB-backed team messages, visible push-notification controls and WhatsApp access
-- **Profile:** quick profile/photo editing, personal statistics, availability, goal, PIN, theme and notification tools
-- **Admin:** dashboard, opponent teams, players, join requests, live scoring and settings
-- **Utilities:** practice team maker, toss room and season statistics
-- **Boundary Blitz:** touch/keyboard cricket mini-game with personal best and MongoDB-backed team high scores
+## API endpoints
 
-The supplied pastel line icons are included as optimized transparent assets in `public/assets/ui-icons/` and used throughout the interface.
-
-## Preserved contracts
-
-This release does not rename or remove backend endpoints and does not alter authentication behaviour.
+Existing endpoints remain available:
 
 - `GET /api/ping`
 - `GET /api/health`
 - `GET /api/state`
 - `PUT /api/state`
 - `GET /api/push/public-key`
-- `POST/DELETE /api/push/subscribe`
+- `POST` and `DELETE /api/push/subscribe`
 - `POST /api/push/send`
 
-Existing player, match, chat, opponent, live-scoring, availability and settings data remain compatible. `gameScores` is an additive state field used only by the mini-game leaderboard.
+Game endpoints added for the approved leaderboard:
 
-## Vercel deployment
+- `POST /api/game-score`
+- `GET /api/game-leaderboard?limit=25`
 
-Use these project settings:
+`PUT /api/state` accepts an optional `baseUpdatedAt` value for stale-write protection. No existing endpoint was renamed.
 
-- **Root Directory:** `./`
-- **Framework Preset:** Other
-- **Build Command:** leave empty/automatic
-- **Output Directory:** handled by the included `vercel.json`
-- **Node.js:** 22.x
+## MongoDB collections
+
+- `team_state`: existing shared application state
+- `push_subscriptions`: existing web-push subscriptions
+- `game_scores`: Boundary Blitz leaderboard entries
+
+No existing schema field is removed.
+
+## Vercel setup
+
+- Root Directory: `./`
+- Framework Preset: Other
+- Build Command: automatic/empty
+- Output Directory: configured by `vercel.json`
+- Node.js: 22.x
 
 Required environment variables:
 
 ```text
 MONGODB_URI
-MONGODB_DB=ball_kho_gayi_xi
+MONGODB_DB
 VAPID_PUBLIC_KEY
 VAPID_PRIVATE_KEY
-VAPID_SUBJECT=mailto:jiking847@gmail.com
+VAPID_SUBJECT
 ```
 
-Add the variables to Production, Preview and Development. Keep `VAPID_PRIVATE_KEY` private.
+Optional hardening variable:
 
-Deploy from the repository root:
+```text
+GAME_SCORE_SALT=<a-long-private-random-value>
+```
+
+The game works without `GAME_SCORE_SALT`, but setting it makes IP rate-limit hashes project-specific. Never commit its value.
+
+## Deploy
 
 ```powershell
 git add -A
-git commit -m "Release final Ball Kho Gayi XI app"
+git commit -m "Release Ball Kho Gayi XI production v7"
 git push
 ```
 
-Vercel will create the deployment automatically.
+After Vercel shows **READY**, test:
 
-## First production check
+1. Player login by selecting the player profile, not Administrator.
+2. Captain and vice-captain access to Toss and live scoring.
+3. Normal player cannot open Toss, including by direct hash URL.
+4. Profile photo and details save correctly.
+5. Chat send, failure/retry and push notification.
+6. Boundary Blitz score appears on the global leaderboard.
+7. Installed app displays the update prompt and new Home game card.
 
-After the deployment becomes **READY**:
+## Android/TWA
 
-1. Open `https://cricket-app-pi-six.vercel.app/api/health` and confirm MongoDB is connected.
-2. Open the website once in Chrome and verify Home, Matches, Squad, Chat and Profile.
-3. Close and reopen the installed Android app. A visible update prompt is included when a newer service worker is waiting.
-4. Test login as player, captain/vice-captain and administrator.
-5. Send a test notification from Chat → Chat tools.
-6. Start Boundary Blitz while logged in and confirm the score appears on the team leaderboard.
-
-## Android/TWA verification
-
-The package association remains in:
-
-```text
-public/.well-known/assetlinks.json
-```
-
-Do not change the Android package name or signing fingerprint unless a new signed Android package is generated.
-
-## Operational note
-
-The existing app saves the complete shared state through `PUT /api/state`. To avoid overwriting live match activity, only one authorized device should operate live scoring at a time. This release preserves that backend contract exactly.
+`public/.well-known/assetlinks.json`, the manifest scope and existing Android package association are preserved. Web-only changes do not require a new APK.

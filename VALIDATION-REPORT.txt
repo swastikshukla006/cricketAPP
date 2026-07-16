@@ -1,0 +1,32 @@
+BALL KHO GAYI XI v7 — VALIDATION REPORT
+
+Passed:
+- JavaScript syntax: app, router, final UI, production UX, game, service worker and all API functions
+- JSON syntax: package, Vercel config, manifest and Android asset links
+- HTML duplicate-ID validation: index.html and game.html
+- Literal JavaScript DOM ID references against index.html
+- Local HTML asset references
+- Service-worker cached asset references
+- CSS brace integrity
+- Existing Android assetlinks.json retained
+
+Functional safeguards included:
+- Player-first login with captain selected by default
+- Existing PIN hashes preserved
+- Toss hidden and route-blocked for normal players
+- Optimistic chat with retry state
+- Offline state save retry and stale-write conflict detection
+- Dedicated MongoDB game leaderboard endpoints
+- Service-worker update prompt with controlled SKIP_WAITING
+
+Not executed inside this container:
+- Full interactive Chromium/device test. Chromium is restricted by the container policy.
+- Live MongoDB writes. Use a Vercel Preview with the existing environment variables.
+
+Required acceptance test before Production:
+1. Player, captain/vice-captain and Administrator login
+2. Profile photo/details update
+3. Chat send/retry and push notification
+4. Toss permission using both normal and leadership accounts
+5. Boundary Blitz global leaderboard submission
+6. Installed Android app update prompt and cache refresh

@@ -2,7 +2,9 @@
   'use strict';
 
   const STORAGE_KEY = 'ballKhoGayiXISharedV3';
-  const SESSION_KEY = 'ballKhoGayiXISessionV3';
+  const SESSION_KEY = 'ballKhoGayiXISessionV4';
+  const LEGACY_SESSION_KEYS = ['ballKhoGayiXISessionV3'];
+  const LAST_LOGIN_KEY = 'ballKhoGayiXILastLogin';
   const DEFAULT_PLAYER_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
   const DEFAULT_ADMIN_PIN_HASH = '1f6ebd8f003635e606b0822bf3301025ce467dc0fdbee1e964c9dcd2adc83471';
 
@@ -66,6 +68,9 @@
   let toastTimer = null;
   let pushRegistration = null;
   let pushSubscription = null;
+  let serverUpdatedAt = null;
+  let appReady = false;
+  let pendingLocalSave = false;
 
   const $ = (id) => document.getElementById(id);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -114,6 +119,19 @@
     return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
+  async function verifyStoredPin(pin, storedValue) {
+    const value = String(storedValue || '').trim();
+    const hash = await hashPin(pin);
+    if (/^[a-f0-9]{64}$/i.test(value)) return { ok: value.toLowerCase() === hash, upgradedHash: '' };
+    if (/^\d{4,6}$/.test(value) && value === String(pin)) return { ok: true, upgradedHash: hash };
+    return { ok: false, upgradedHash: '' };
+  }
+
+  function persistLocalData() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); return true; }
+    catch (error) { console.warn('Local backup could not be updated:', error); return false; }
+  }
+
   async function loadDataFromServer() {
     try {
       const response = await fetch('/api/state', { headers: { Accept: 'application/json' }, cache: 'no-store' });
@@ -121,7 +139,8 @@
       const payload = await response.json();
       const needsMigrationSave = !payload.state || Number(payload.state?.settings?.version || 0) < 3;
       data = migrateData(payload.state || deepClone(seedData));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      serverUpdatedAt = payload.updatedAt || null;
+      persistLocalData();
       if (needsMigrationSave) await saveData();
     } catch (error) {
       console.warn('MongoDB unavailable; using local backup:', error);
@@ -130,13 +149,39 @@
     }
   }
 
+  function emitSaveState(status, detail = {}) {
+    window.dispatchEvent(new CustomEvent('bkgxi:save-state', { detail: { status, ...detail } }));
+  }
+
   function saveData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    persistLocalData();
+    pendingLocalSave = true;
     const snapshot = deepClone(data);
+    emitSaveState('saving');
     saveQueue = saveQueue.catch(() => undefined).then(async () => {
-      const response = await fetch('/api/state', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: snapshot }) });
-      if (!response.ok) throw new Error(await response.text() || `Save failed (${response.status})`);
-    }).catch((error) => console.warn('MongoDB save failed; local backup kept:', error));
+      const response = await fetch('/api/state', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: snapshot, baseUpdatedAt: serverUpdatedAt })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 409) {
+        const conflict = new Error('Another device saved newer data. Refresh before trying again.');
+        conflict.code = 'STATE_CONFLICT';
+        emitSaveState('conflict');
+        throw conflict;
+      }
+      if (!response.ok) throw new Error(payload.error || `Save failed (${response.status})`);
+      serverUpdatedAt = payload.updatedAt || serverUpdatedAt;
+      pendingLocalSave = false;
+      emitSaveState('saved');
+      return payload;
+    }).catch((error) => {
+      console.warn('MongoDB save failed; local backup kept:', error);
+      pendingLocalSave = true;
+      if (error?.code !== 'STATE_CONFLICT') emitSaveState(navigator.onLine ? 'error' : 'offline', { message: error.message });
+      return null;
+    });
     return saveQueue;
   }
 
@@ -147,20 +192,32 @@
       const response = await fetch('/api/state', { cache: 'no-store' });
       if (!response.ok) return;
       const payload = await response.json();
-      if (payload.state) { data = migrateData(payload.state); localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); renderAll(); }
+      if (payload.state) { data = migrateData(payload.state); serverUpdatedAt = payload.updatedAt || serverUpdatedAt; persistLocalData(); renderAll(); }
     } catch { /* quiet background refresh */ }
   }
 
   function loadSession() {
-    try {
-      const parsed = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
-      if (!parsed) return null;
-      if (parsed.type === 'admin') return parsed;
-      if (parsed.type === 'player' && data.players.some((p) => p.id === parsed.playerId && p.status === 'active')) return parsed;
-      return null;
-    } catch { return null; }
+    const keys = [SESSION_KEY, ...LEGACY_SESSION_KEYS];
+    for (const key of keys) {
+      for (const store of [localStorage, sessionStorage]) {
+        try {
+          const parsed = JSON.parse(store.getItem(key) || 'null');
+          if (!parsed) continue;
+          if (parsed.expiresAt && Date.now() > parsed.expiresAt) { store.removeItem(key); continue; }
+          if (parsed.type === 'admin') return { type:'admin', remember: parsed.remember !== false };
+          if (parsed.type === 'player' && data.players.some((p) => p.id === parsed.playerId && p.status === 'active')) return { type:'player', playerId:parsed.playerId, remember:parsed.remember !== false };
+        } catch { /* try the next store */ }
+      }
+    }
+    return null;
   }
-  function saveSession() { session ? sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)) : sessionStorage.removeItem(SESSION_KEY); }
+  function saveSession() {
+    [SESSION_KEY, ...LEGACY_SESSION_KEYS].forEach((key) => { localStorage.removeItem(key); sessionStorage.removeItem(key); });
+    if (!session) return;
+    const remember = session.remember !== false;
+    const stored = { ...session, expiresAt: remember ? Date.now() + 30 * 24 * 60 * 60 * 1000 : Date.now() + 12 * 60 * 60 * 1000 };
+    (remember ? localStorage : sessionStorage).setItem(SESSION_KEY, JSON.stringify(stored));
+  }
 
   function escapeHtml(value = '') { return String(value).replace(/[&<>'"]/g, (char) => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[char])); }
   function safeImage(value, fallback = '') { const v = String(value || ''); return /^(data:image\/|assets\/)/.test(v) ? v : fallback; }
@@ -240,7 +297,7 @@
       button.textContent = 'Not Supported'; button.disabled = true; test?.classList.add('hidden'); return;
     }
     if (Notification.permission === 'denied') {
-      status.textContent = 'Blocked in phone settings. Allow notifications for CricCircle.';
+      status.textContent = 'Blocked in phone settings. Allow notifications for Ball Kho Gayi XI.';
       button.textContent = 'Notifications Blocked'; button.disabled = true; card.classList.add('blocked'); test?.classList.add('hidden'); return;
     }
     button.disabled = false;
@@ -312,7 +369,7 @@
   async function sendTestNotification() {
     if (!pushSubscription) return toast('Enable notifications first');
     const result = await sendPushNotification({
-      title: 'CricCircle Notifications', body: 'Notifications are working on this phone 🏏',
+      title: 'Ball Kho Gayi XI Notifications', body: 'Notifications are working on this phone 🏏',
       url: '/#chat', tag: `test-${Date.now()}`, type: 'test', audience: 'endpoint',
       targetEndpoint: pushSubscription.endpoint, excludeEndpoint: ''
     });
@@ -489,7 +546,8 @@
   function handleHomeAction(action) {
     if (action === 'login') return openModal('loginModal');
     if (action === 'profile') return session ? window.BKGXIRouter?.navigate('profile') : openModal('loginModal');
-    if (['matches','squad','chat','admin','game'].includes(action)) return window.BKGXIRouter?.navigate(action);
+    if (action === 'game') { window.location.href = '/game.html'; return; }
+    if (['matches','squad','chat','admin'].includes(action)) return window.BKGXIRouter?.navigate(action);
     if (action === 'live') return canManage() ? openLiveSetup() : window.BKGXIRouter?.navigate('matches');
     if (action === 'schedule') return canManage() ? openModal('scheduleModal') : requireLogin();
     if (action === 'result') return openResultModal();
@@ -690,7 +748,7 @@
     s.deliveries.push({label,type,over:`${Math.floor(Math.max(0,s.legalBalls-1)/6)}.${s.legalBalls%6}`,at:new Date().toISOString()});s.deliveries=s.deliveries.slice(-36);s.updatedAt=new Date().toISOString();s.updatedBy=isAdmin()?data.settings.adminName:(getSessionPlayer()?.name||'Scorer');
     if(s.wickets>=10 || s.legalBalls>=Number(s.oversLimit||10)*6 || (s.target && s.runs>=s.target)){s.active=false;s.completed=true;}
     const importantBall = label === 'W' || label === '4' || label === '6' || s.completed;
-    if (importantBall) sendPushNotification({title:s.completed?'Innings Update':`${label === 'W' ? 'Wicket!' : `${label} runs!`} · CricCircle`,body:liveScoreText(),url:'/#live-scoring',tag:'live-score',type:'live-score'});
+    if (importantBall) sendPushNotification({title:s.completed?'Innings Update':`${label === 'W' ? 'Wicket!' : `${label} runs!`} · Ball Kho Gayi XI`,body:liveScoreText(),url:'/#/live-scoring',tag:'live-score',type:'live-score'});
     saveData();renderLiveScoring();renderPremiumHome();
   }
   function undoLiveBall(){if(!canScore())return;const s=data.liveScoring,previous=s.history.pop();if(!previous)return toast('Nothing to undo');const history=[...s.history];data.liveScoring={...defaultLiveScoring(),...JSON.parse(previous),history};saveData();renderLiveScoring();renderPremiumHome();toast('Last ball undone');}
@@ -722,10 +780,40 @@
     $('practiceTeamA').innerHTML=renderList(pt.teamA||[],'A'); $('practiceTeamB').innerHTML=renderList(pt.teamB||[],'B'); $('practiceUpdated').textContent=pt.updatedAt?`Last distributed ${formatTime(pt.updatedAt)} · ${formatDate(pt.updatedAt.slice(0,10))}`:'Teams have not been distributed yet.';
   }
 
+  function chatDayLabel(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const today = new Date();
+    const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+    const key = date.toDateString();
+    if (key === today.toDateString()) return 'Today';
+    if (key === yesterday.toDateString()) return 'Yesterday';
+    return new Intl.DateTimeFormat('en-IN', { day:'numeric', month:'short', year:'numeric' }).format(date);
+  }
+
   function renderChat() {
-    const list=$('chatMessages'); const messages=[...data.chat].sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).slice(-100);
-    if(!messages.length){list.innerHTML='<div class="chat-empty">No messages yet. Start the cricket conversation.</div>';} else list.innerHTML=messages.map((m)=>{const player=data.players.find((p)=>p.id===m.senderId); const mine=session&&(session.type==='admin'?m.senderRole==='Administrator':m.senderId===session.playerId); return `<div class="message ${mine?'mine':''}">${avatarHtml(player||{name:m.senderName})}<div><div class="message-bubble"><div class="message-head"><strong>${escapeHtml(m.senderName)}</strong><span>${escapeHtml(m.senderRole||'Player')} · ${formatTime(m.createdAt)}</span></div><p>${escapeHtml(m.text)}</p></div>${isAdmin()||mine?`<button class="message-delete" data-delete-message="${m.id}">Delete</button>`:''}</div></div>`;}).join('');
-    $('chatInput').disabled=!session; $('chatInput').placeholder=session?'Write a message…':'Log in to send a message'; $('chatStatus').textContent=session?'Messages sync through MongoDB.':'Player login required to post.'; updateNotificationUI(); requestAnimationFrame(()=>{list.scrollTop=list.scrollHeight;});
+    const list = $('chatMessages');
+    const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 120;
+    const messages = [...data.chat].sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)).slice(-100);
+    if (!messages.length) {
+      list.innerHTML = '<div class="chat-empty">No messages yet. Start the cricket conversation.</div>';
+    } else {
+      let lastDay = '';
+      list.innerHTML = messages.map((m) => {
+        const player = data.players.find((p)=>p.id===m.senderId);
+        const mine = session && (session.type==='admin' ? m.senderRole==='Administrator' : m.senderId===session.playerId);
+        const day = chatDayLabel(m.createdAt);
+        const separator = day && day !== lastDay ? `<div class="chat-date-separator"><span>${escapeHtml(day)}</span></div>` : '';
+        lastDay = day;
+        const delivery = m.delivery === 'sending' ? '<span class="message-delivery sending">Sending…</span>' : m.delivery === 'failed' ? `<button class="message-delivery failed" type="button" data-retry-message="${escapeHtml(m.id)}">Not sent · Retry</button>` : '';
+        return `${separator}<div class="message ${mine?'mine':''}">${avatarHtml(player||{name:m.senderName})}<div><div class="message-bubble"><div class="message-head"><strong>${escapeHtml(m.senderName)}</strong><span>${escapeHtml(m.senderRole||'Player')} · ${formatTime(m.createdAt)}</span></div><p>${escapeHtml(m.text)}</p></div><div class="message-actions">${delivery}${isAdmin()||mine?`<button class="message-delete" data-delete-message="${escapeHtml(m.id)}">Delete</button>`:''}</div></div></div>`;
+      }).join('');
+    }
+    $('chatInput').disabled = !session;
+    $('chatInput').placeholder = session ? 'Write a message…' : 'Log in to send a message';
+    $('chatStatus').textContent = !navigator.onLine ? 'Offline — messages will stay on this phone until you reconnect.' : session ? 'Connected · messages sync through MongoDB.' : 'Player login required to post.';
+    updateNotificationUI();
+    requestAnimationFrame(()=>{ if (nearBottom || !list.dataset.initialized) list.scrollTop=list.scrollHeight; list.dataset.initialized='true'; });
   }
 
   function renderToss() {
@@ -747,7 +835,14 @@
   }
 
   function renderLoginOptions() {
-    const current=$('loginAccount').value; $('loginAccount').innerHTML=`<option value="admin">${escapeHtml(data.settings.adminName)} — Administrator</option>${activePlayers().map((p)=>`<option value="player:${p.id}">${escapeHtml(p.name)} — ${escapeHtml(leadershipLabel(p.id))}</option>`).join('')}`; if([...$('loginAccount').options].some((o)=>o.value===current))$('loginAccount').value=current;
+    const select = $('loginAccount');
+    if (!select) return;
+    const last = localStorage.getItem(LAST_LOGIN_KEY) || '';
+    const preferred = last.startsWith('player:') ? last : `player:${data.settings.captainId || activePlayers()[0]?.id || ''}`;
+    const current = select.value || preferred;
+    select.innerHTML = `${activePlayers().map((p)=>`<option value="player:${p.id}">${escapeHtml(p.name)} — ${escapeHtml(leadershipLabel(p.id))}</option>`).join('')}<option value="admin">${escapeHtml(data.settings.adminName)} — Administrator settings</option>`;
+    if ([...select.options].some((option)=>option.value===current)) select.value=current;
+    else if ([...select.options].some((option)=>option.value===preferred)) select.value=preferred;
   }
   function renderPerformanceRows() { $('performanceRows').innerHTML=activePlayers().map((p)=>`<tr data-performance-player="${p.id}"><td><strong>${escapeHtml(p.name)}</strong><br><small>${escapeHtml(p.role)}</small></td>${['runs','balls','wickets','oversBowled','runsConceded','catches'].map((field)=>`<td><input type="number" min="0" ${field==='oversBowled'?'step="0.1"':''} data-field="${field}" /></td>`).join('')}</tr>`).join(''); }
   function renderOpponentOptions() { const options=`<option value="">Custom opponent</option>${data.opponentTeams.map((t)=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}`; $('scheduleOpponentTeam').innerHTML=options; }
@@ -798,7 +893,12 @@
   }
 
   function openProfileModal() {
-    const p=getSessionPlayer(); if(!p)return requireLogin(); $('profileName').value=p.name; $('profilePhone').value=p.phone||''; $('profileJersey').value=p.jersey; $('profileRole').value=p.role||'Batter'; $('profileClass').value=p.className||''; $('profileNote').value=p.note||''; $('profilePhoto').value=''; openModal('profileModal');
+    const p=getSessionPlayer();
+    if(!p)return requireLogin();
+    $('profileName').value=p.name; $('profilePhone').value=p.phone||''; $('profileJersey').value=p.jersey; $('profileRole').value=p.role||'Batter'; $('profileClass').value=p.className||''; $('profileBatting').value=p.battingStyle||''; $('profileBowling').value=p.bowlingStyle||''; $('profileNote').value=p.note||''; $('profilePhoto').value='';
+    const preview=$('profilePhotoPreview'); if(preview) preview.innerHTML=p.photo?`<img src="${safeImage(p.photo)}" alt="${escapeHtml(p.name)} profile preview"/>`:`<span>${initials(p.name)}</span>`;
+    $('profileFormMessage').textContent=''; $('profileForm').dataset.dirty='false';
+    openModal('profileModal');
   }
 
   function openOpponentTeamModal(id='') { if(!isAdmin())return requireLogin(); const t=data.opponentTeams.find((x)=>x.id===id); $('editingOpponentTeamId').value=id; $('opponentTeamModalTitle').textContent=t?'Edit team':'Add team'; $('opponentTeamName').value=t?.name||''; $('opponentTeamColor').value=t?.color||'#d6a928'; $('opponentTeamGround').value=t?.ground||''; openModal('opponentTeamModal'); }
@@ -862,23 +962,62 @@
     $$('[data-close]').forEach((b)=>b.addEventListener('click',()=>closeModal(b.dataset.close))); $$('.modal').forEach((m)=>m.addEventListener('click',(e)=>{if(e.target===m)closeModal(m.id);}));
     $('openJoinBtn').addEventListener('click',()=>{closeModal('loginModal');openModal('joinModal');});
 
-    $('loginForm').addEventListener('submit',async(e)=>{e.preventDefault();const account=$('loginAccount').value;const pin=$('loginPin').value.trim();if(!validPin(pin))return toast('Enter your 4–6 digit PIN');const pinHash=await hashPin(pin);if(account==='admin'){if(pinHash!==data.settings.adminPinHash)return toast('Incorrect PIN');session={type:'admin'};}else{const id=account.split(':')[1];const p=data.players.find((x)=>x.id===id&&x.status==='active');if(!p||pinHash!==p.pinHash)return toast('Incorrect PIN');session={type:'player',playerId:p.id};}saveSession();$('loginPin').value='';closeModal('loginModal');renderAll();initializePushNotifications();toast('Welcome to the dressing room');});
+    $('loginForm').addEventListener('submit',async(e)=>{
+      e.preventDefault();
+      const account=$('loginAccount').value, pin=$('loginPin').value.trim(), message=$('loginMessage'), submit=$('loginSubmitBtn');
+      message.textContent=''; message.className='form-message';
+      if(!account){message.textContent='Choose an account first.';return;}
+      if(!validPin(pin)){message.textContent='Enter a 4–6 digit PIN.';$('loginPin').focus();return;}
+      submit.disabled=true;submit.textContent='Checking…';
+      try{
+        const remember=$('rememberLogin')?.checked!==false;
+        if(account==='admin'){
+          const verification=await verifyStoredPin(pin,data.settings.adminPinHash);
+          if(!verification.ok){message.textContent='That is not the Administrator PIN. Captain and vice-captain should choose their player name above.';message.classList.add('error');return;}
+          if(verification.upgradedHash){data.settings.adminPinHash=verification.upgradedHash;await saveData();}
+          session={type:'admin',remember};
+        }else{
+          const id=account.split(':')[1],p=data.players.find((x)=>x.id===id&&x.status==='active');
+          if(!p){renderLoginOptions();message.textContent='That player account is no longer available. Choose another account.';message.classList.add('error');return;}
+          const verification=await verifyStoredPin(pin,p.pinHash);
+          if(!verification.ok){message.textContent=`Incorrect PIN for ${p.name}. Ask the administrator to reset it if forgotten.`;message.classList.add('error');return;}
+          if(verification.upgradedHash){p.pinHash=verification.upgradedHash;await saveData();}
+          session={type:'player',playerId:p.id,remember};
+        }
+        localStorage.setItem(LAST_LOGIN_KEY,account);saveSession();$('loginPin').value='';closeModal('loginModal');renderAll();initializePushNotifications();window.BKGXIRouter?.navigate('home');toast('Welcome to the dressing room');
+      }catch(error){message.textContent='Login could not be completed. Check your connection and try again.';message.classList.add('error');console.error('Login failed:',error);}
+      finally{submit.disabled=false;submit.textContent='Enter dressing room';}
+    });
     $('logoutBtn').addEventListener('click',()=>{session=null;saveSession();renderAll();toast('Logged out');});
 
-    $('joinForm').addEventListener('submit',async(e)=>{e.preventDefault();const name=$('joinName').value.trim(),phone=$('joinPhone').value.trim(),jersey=Number($('joinJersey').value),pin=$('joinPin').value.trim();if(!validPhone(phone))return toast('Enter a valid phone number');if(!validPin(pin))return toast('PIN must contain 4–6 numbers');if(!jerseyAvailable(jersey))return toast('That jersey number is already used');if(data.joinRequests.some((r)=>r.phone.replace(/\D/g,'')===phone.replace(/\D/g,'')))return toast('A request already exists for this phone');let photo='';try{photo=await readCompressedImage($('joinPhoto').files[0]);}catch(err){return toast(err.message);}data.joinRequests.push({id:uid('request'),name,phone,jersey,role:$('joinRole').value,className:$('joinClass').value.trim()||'School Squad',note:$('joinNote').value.trim(),photo,pinHash:await hashPin(pin),createdAt:new Date().toISOString()});saveData();sendPushNotification({title:'New CricCircle Join Request',body:`${name} requested to join as ${$('joinRole').value}.`,url:'/#admin',tag:'join-request',type:'join-request',audience:'leadership'});e.target.reset();closeModal('joinModal');toast('Join request sent to Swastik admin');renderAdmin();});
+    $('joinForm').addEventListener('submit',async(e)=>{e.preventDefault();const name=$('joinName').value.trim(),phone=$('joinPhone').value.trim(),jersey=Number($('joinJersey').value),pin=$('joinPin').value.trim();if(!validPhone(phone))return toast('Enter a valid phone number');if(!validPin(pin))return toast('PIN must contain 4–6 numbers');if(!jerseyAvailable(jersey))return toast('That jersey number is already used');if(data.joinRequests.some((r)=>r.phone.replace(/\D/g,'')===phone.replace(/\D/g,'')))return toast('A request already exists for this phone');let photo='';try{photo=await readCompressedImage($('joinPhoto').files[0]);}catch(err){return toast(err.message);}data.joinRequests.push({id:uid('request'),name,phone,jersey,role:$('joinRole').value,className:$('joinClass').value.trim()||'School Squad',note:$('joinNote').value.trim(),photo,pinHash:await hashPin(pin),createdAt:new Date().toISOString()});saveData();sendPushNotification({title:'New Ball Kho Gayi XI Join Request',body:`${name} requested to join as ${$('joinRole').value}.`,url:'/#/admin',tag:'join-request',type:'join-request',audience:'leadership'});e.target.reset();closeModal('joinModal');toast('Join request sent to Swastik admin');renderAdmin();});
 
-    $('editProfileBtn').addEventListener('click',openProfileModal); $('profileForm').addEventListener('submit',async(e)=>{e.preventDefault();const p=getSessionPlayer();if(!p)return;const jersey=Number($('profileJersey').value);if(!jerseyAvailable(jersey,p.id))return toast('That jersey number is already used');const phone=$('profilePhone').value.trim();if(phone&&!validPhone(phone))return toast('Enter a valid phone number');let photo=p.photo||'';try{if($('profilePhoto').files[0])photo=await readCompressedImage($('profilePhoto').files[0]);}catch(err){return toast(err.message);}Object.assign(p,{name:$('profileName').value.trim(),phone,jersey,role:$('profileRole').value,className:$('profileClass').value.trim()||'School Squad',note:$('profileNote').value.trim(),photo});saveData();closeModal('profileModal');renderAll();toast('Profile updated on all devices');});
-    $('changePinBtn').addEventListener('click',()=>openModal('pinModal')); $('pinForm').addEventListener('submit',async(e)=>{e.preventDefault();const current=$('currentPin').value.trim(),next=$('newPin').value.trim(),confirm=$('confirmPin').value.trim();if(!validPin(next)||next!==confirm)return toast('New PINs must match and contain 4–6 numbers');const currentHash=await hashPin(current);if(isAdmin()){if(currentHash!==data.settings.adminPinHash)return toast('Current PIN is incorrect');data.settings.adminPinHash=await hashPin(next);}else{const p=getSessionPlayer();if(!p||currentHash!==p.pinHash)return toast('Current PIN is incorrect');p.pinHash=await hashPin(next);}saveData();e.target.reset();closeModal('pinModal');toast('PIN updated');});
+    $('editProfileBtn').addEventListener('click',openProfileModal); $('profileForm').addEventListener('submit',async(e)=>{
+      e.preventDefault();const p=getSessionPlayer();if(!p)return;
+      const form=e.currentTarget,message=$('profileFormMessage'),saveButton=$('profileSaveBtn'),jersey=Number($('profileJersey').value),phone=$('profilePhone').value.trim(),name=$('profileName').value.trim();
+      message.textContent='';message.className='form-message full';
+      if(name.length<2){message.textContent='Enter your full name.';message.classList.add('error');return;}
+      if(!jerseyAvailable(jersey,p.id)){message.textContent='That jersey number is already used.';message.classList.add('error');return;}
+      if(phone&&!validPhone(phone)){message.textContent='Enter a valid phone number.';message.classList.add('error');return;}
+      saveButton.disabled=true;saveButton.textContent='Saving…';let photo=p.photo||'';
+      try{
+        if($('profilePhoto').files[0])photo=await readCompressedImage($('profilePhoto').files[0]);
+        Object.assign(p,{name,phone,jersey,role:$('profileRole').value,className:$('profileClass').value.trim()||'School Squad',battingStyle:$('profileBatting').value.trim()||'Right-hand bat',bowlingStyle:$('profileBowling').value.trim()||'Does not bowl',note:$('profileNote').value.trim(),photo});
+        const saved=await saveData();form.dataset.dirty='false';message.textContent=saved?'Profile saved successfully.':'Saved on this phone. It will sync when the connection is restored.';message.classList.add(saved?'success':'warning');renderAll();setTimeout(()=>closeModal('profileModal'),saved?500:1100);toast(saved?'Profile updated on all devices':'Profile saved locally');
+      }catch(err){message.textContent=err.message||'Could not save your profile.';message.classList.add('error');}
+      finally{saveButton.disabled=false;saveButton.textContent='Save changes';}
+    });
+    $('changePinBtn').addEventListener('click',()=>openModal('pinModal')); $('pinForm').addEventListener('submit',async(e)=>{e.preventDefault();const current=$('currentPin').value.trim(),next=$('newPin').value.trim(),confirm=$('confirmPin').value.trim();if(!validPin(next)||next!==confirm)return toast('New PINs must match and contain 4–6 numbers');if(isAdmin()){const check=await verifyStoredPin(current,data.settings.adminPinHash);if(!check.ok)return toast('Current PIN is incorrect');data.settings.adminPinHash=await hashPin(next);}else{const p=getSessionPlayer();if(!p)return requireLogin();const check=await verifyStoredPin(current,p.pinHash);if(!check.ok)return toast('Current PIN is incorrect');p.pinHash=await hashPin(next);}const saved=await saveData();e.target.reset();closeModal('pinModal');toast(saved?'PIN updated':'PIN changed on this phone; reconnect to sync');});
 
     $$('[data-availability]').forEach((b)=>b.addEventListener('click',()=>{const p=getSessionPlayer(),m=getUpcomingMatch();if(!p||!m)return;data.availability[m.id]=data.availability[m.id]||{};data.availability[m.id][p.id]=b.dataset.availability;saveData();renderAccount();toast(`Availability: ${b.dataset.availability}`);})); $('saveGoalBtn').addEventListener('click',()=>{const p=getSessionPlayer();if(!p)return requireLogin();data.goals[p.id]=$('personalGoalInput').value.trim();saveData();toast('Goal saved');});
 
     $('scheduleBtn').addEventListener('click',()=>canManage()?openModal('scheduleModal'):requireLogin()); $('captainScheduleBtn').addEventListener('click',()=>openModal('scheduleModal')); $('quickResultBtn').addEventListener('click',()=>openResultModal()); $('captainResultBtn').addEventListener('click',()=>openResultModal());
     $('startLiveBtn').addEventListener('click',()=>openLiveSetup()); $('liveSetupBtn').addEventListener('click',()=>openLiveSetup()); $('liveUndoBtn').addEventListener('click',undoLiveBall); $('liveResetBtn').addEventListener('click',resetLiveScore); $('liveSwapBtn').addEventListener('click',()=>swapLiveStrike()); $('liveChangePlayersBtn').addEventListener('click',()=>openLiveSetup(data.liveScoring.matchId)); $('liveUseResultBtn').addEventListener('click',useLiveInResult); $('liveShareBtn').addEventListener('click',shareLiveScore); $('liveEndBtn').addEventListener('click',()=>askConfirm('End this innings?','The score will remain saved and can be copied into the Result Desk.',()=>{data.liveScoring.active=false;data.liveScoring.completed=true;data.liveScoring.updatedAt=new Date().toISOString();saveData();renderLiveScoring();renderPremiumHome();toast('Innings ended');}));
     $('liveMatchSelect').addEventListener('change',()=>{const m=data.matches.find((x)=>x.id===$('liveMatchSelect').value);if(m){$('liveOpponentInput').value=m.opponent;$('liveOversInput').value=m.overs;}});
-    $('liveSetupForm').addEventListener('submit',(e)=>{e.preventDefault();if(!canScore())return requireLogin();const previous=data.liveScoring,matchId=$('liveMatchSelect').value,opponent=$('liveOpponentInput').value.trim(),sameMatch=!previous.completed&&previous.opponent===opponent&&previous.matchId===matchId,base=sameMatch?previous:defaultLiveScoring();data.liveScoring={...base,active:true,completed:false,matchId,opponent,battingSide:$('liveBattingSide').value,oversLimit:Number($('liveOversInput').value||10),target:Number($('liveTargetInput').value||0),striker:$('liveStrikerInput').value.trim(),nonStriker:$('liveNonStrikerInput').value.trim(),bowler:$('liveBowlerInput').value.trim(),startedAt:base.startedAt||new Date().toISOString(),updatedAt:new Date().toISOString(),updatedBy:isAdmin()?data.settings.adminName:(getSessionPlayer()?.name||'Scorer')};liveBatter(data.liveScoring.striker);liveBatter(data.liveScoring.nonStriker);saveData();sendPushNotification({title:'Live Scoring Started',body:liveScoreText(),url:'/#live-scoring',tag:'live-start',type:'live-score'});closeModal('liveSetupModal');renderLiveScoring();renderPremiumHome();window.BKGXIRouter?.navigate('live-scoring');toast('Live scoreboard ready');});
+    $('liveSetupForm').addEventListener('submit',(e)=>{e.preventDefault();if(!canScore())return requireLogin();const previous=data.liveScoring,matchId=$('liveMatchSelect').value,opponent=$('liveOpponentInput').value.trim(),sameMatch=!previous.completed&&previous.opponent===opponent&&previous.matchId===matchId,base=sameMatch?previous:defaultLiveScoring();data.liveScoring={...base,active:true,completed:false,matchId,opponent,battingSide:$('liveBattingSide').value,oversLimit:Number($('liveOversInput').value||10),target:Number($('liveTargetInput').value||0),striker:$('liveStrikerInput').value.trim(),nonStriker:$('liveNonStrikerInput').value.trim(),bowler:$('liveBowlerInput').value.trim(),startedAt:base.startedAt||new Date().toISOString(),updatedAt:new Date().toISOString(),updatedBy:isAdmin()?data.settings.adminName:(getSessionPlayer()?.name||'Scorer')};liveBatter(data.liveScoring.striker);liveBatter(data.liveScoring.nonStriker);saveData();sendPushNotification({title:'Live Scoring Started',body:liveScoreText(),url:'/#/live-scoring',tag:'live-start',type:'live-score'});closeModal('liveSetupModal');renderLiveScoring();renderPremiumHome();window.BKGXIRouter?.navigate('live-scoring');toast('Live scoreboard ready');});
     $$('[data-live-ball]').forEach((b)=>b.addEventListener('click',()=>recordLiveBall(b.dataset.liveBall,b.dataset.value)));
-    $('scheduleForm').addEventListener('submit',(e)=>{e.preventDefault();if(!canManage())return requireLogin();const teamId=$('scheduleOpponentTeam').value;const team=data.opponentTeams.find((t)=>t.id===teamId);const opponent=team?.name||$('scheduleOpponent').value.trim();if(!opponent)return toast('Choose or enter an opponent');data.matches.push({id:uid('match'),status:'Upcoming',opponent,opponentTeamId:teamId,venue:$('scheduleVenue').value.trim(),date:$('scheduleDate').value,time:$('scheduleTime').value,overs:Number($('scheduleOvers').value),ballType:$('scheduleBall').value,notes:$('scheduleNotes').value.trim(),createdAt:Date.now()});saveData();sendPushNotification({title:'New Match Scheduled',body:`${data.settings.groupName} vs ${opponent} · ${formatDate($('scheduleDate').value)} at ${$('scheduleTime').value || 'time TBA'}`,url:'/#matches',tag:'match-scheduled',type:'match'});e.target.reset();closeModal('scheduleModal');renderAll();toast('Fixture scheduled');});
-    $('resultForm').addEventListener('submit',(e)=>{e.preventDefault();if(!canManage())return requireLogin();const existingId=e.target.dataset.matchId;const old=data.matches.find((m)=>m.id===existingId);const match={id:existingId||uid('match'),status:'Completed',opponent:$('resultOpponent').value.trim(),opponentTeamId:old?.opponentTeamId||'',date:$('resultDate').value,venue:$('resultVenue').value.trim(),time:old?.time||'',overs:Number($('resultOvers').value),ballType:old?.ballType||'Tennis',ourScore:$('ourScore').value.trim(),opponentScore:$('opponentScore').value.trim(),tossWinner:$('resultTossWinner').value,tossDecision:$('resultTossDecision').value,outcome:$('resultOutcome').value,resultSummary:$('resultSummary').value.trim(),notes:$('resultNotes').value.trim(),performances:collectPerformances(),createdAt:Date.now()};data.matches=existingId?data.matches.map((m)=>m.id===existingId?match:m):[...data.matches,match];saveData();sendPushNotification({title:'Match Result Added',body:`${data.settings.groupName} ${match.ourScore} · ${match.resultSummary}`,url:'/#matches',tag:'match-result',type:'match'});closeModal('resultModal');renderAll();toast('Match saved and stats updated');});
+    $('scheduleForm').addEventListener('submit',(e)=>{e.preventDefault();if(!canManage())return requireLogin();const teamId=$('scheduleOpponentTeam').value;const team=data.opponentTeams.find((t)=>t.id===teamId);const opponent=team?.name||$('scheduleOpponent').value.trim();if(!opponent)return toast('Choose or enter an opponent');data.matches.push({id:uid('match'),status:'Upcoming',opponent,opponentTeamId:teamId,venue:$('scheduleVenue').value.trim(),date:$('scheduleDate').value,time:$('scheduleTime').value,overs:Number($('scheduleOvers').value),ballType:$('scheduleBall').value,notes:$('scheduleNotes').value.trim(),createdAt:Date.now()});saveData();sendPushNotification({title:'New Match Scheduled',body:`${data.settings.groupName} vs ${opponent} · ${formatDate($('scheduleDate').value)} at ${$('scheduleTime').value || 'time TBA'}`,url:'/#/matches',tag:'match-scheduled',type:'match'});e.target.reset();closeModal('scheduleModal');renderAll();toast('Fixture scheduled');});
+    $('resultForm').addEventListener('submit',(e)=>{e.preventDefault();if(!canManage())return requireLogin();const existingId=e.target.dataset.matchId;const old=data.matches.find((m)=>m.id===existingId);const match={id:existingId||uid('match'),status:'Completed',opponent:$('resultOpponent').value.trim(),opponentTeamId:old?.opponentTeamId||'',date:$('resultDate').value,venue:$('resultVenue').value.trim(),time:old?.time||'',overs:Number($('resultOvers').value),ballType:old?.ballType||'Tennis',ourScore:$('ourScore').value.trim(),opponentScore:$('opponentScore').value.trim(),tossWinner:$('resultTossWinner').value,tossDecision:$('resultTossDecision').value,outcome:$('resultOutcome').value,resultSummary:$('resultSummary').value.trim(),notes:$('resultNotes').value.trim(),performances:collectPerformances(),createdAt:Date.now()};data.matches=existingId?data.matches.map((m)=>m.id===existingId?match:m):[...data.matches,match];saveData();sendPushNotification({title:'Match Result Added',body:`${data.settings.groupName} ${match.ourScore} · ${match.resultSummary}`,url:'/#/matches',tag:'match-result',type:'match'});closeModal('resultModal');renderAll();toast('Match saved and stats updated');});
     $$('[data-match-filter]').forEach((button)=>button.addEventListener('click',()=>{matchFilter=button.dataset.matchFilter;renderMatches();}));
 
     $('addPlayerBtn').addEventListener('click',()=>openPlayerModal()); $('playerForm').addEventListener('submit',async(e)=>{e.preventDefault();if(!isAdmin())return requireLogin();const id=$('editingPlayerId').value,existing=data.players.find((p)=>p.id===id),jersey=Number($('playerJersey').value),phone=$('playerPhone').value.trim(),newPin=$('playerPin').value.trim();if(!jerseyAvailable(jersey,id))return toast('That jersey number is already used');if(phone&&!validPhone(phone))return toast('Enter a valid phone number');if(newPin&&!validPin(newPin))return toast('PIN must contain 4–6 numbers');let photo=existing?.photo||'';try{if($('playerPhoto').files[0])photo=await readCompressedImage($('playerPhoto').files[0]);}catch(err){return toast(err.message);}const p={id:id||uid('player'),name:$('playerName').value.trim(),phone,jersey,role:$('playerRole').value,className:$('playerClass').value.trim()||'School Squad',pinHash:newPin?await hashPin(newPin):(existing?.pinHash||DEFAULT_PLAYER_PIN_HASH),battingStyle:$('playerBatting').value.trim()||'Right-hand bat',bowlingStyle:$('playerBowling').value.trim()||'Does not bowl',note:$('playerNote').value.trim(),photo,status:'active'};data.players=id?data.players.map((x)=>x.id===id?p:x):[...data.players,p];saveData();closeModal('playerModal');renderAll();toast(id?'Player updated':'Player added');});
@@ -888,13 +1027,13 @@
 
     $('shuffleTeamsBtn').addEventListener('click',shufflePracticeTeams); $('renamePracticeBtn').addEventListener('click',()=>{$('practiceNameInputA').value=data.practiceTeams.nameA;$('practiceNameInputB').value=data.practiceTeams.nameB;openModal('practiceNameModal');}); $('practiceNameForm').addEventListener('submit',(e)=>{e.preventDefault();data.practiceTeams.nameA=$('practiceNameInputA').value.trim();data.practiceTeams.nameB=$('practiceNameInputB').value.trim();saveData();closeModal('practiceNameModal');renderPractice();toast('Practice teams renamed');});
 
-    $('chatForm').addEventListener('submit',async(e)=>{e.preventDefault();if(!session)return requireLogin();const text=$('chatInput').value.trim();if(!text)return;const p=getSessionPlayer(),senderName=isAdmin()?data.settings.adminName:p.name,senderRole=isAdmin()?'Administrator':leadershipLabel(p.id);data.chat.push({id:uid('message'),senderId:p?.id||'admin',senderName,senderRole,text,createdAt:new Date().toISOString()});data.chat=data.chat.slice(-100);$('chatInput').value='';await saveData();renderChat();sendPushNotification({title:`${senderName} · CricCircle`,body:text,url:'/#chat',tag:'group-chat',type:'chat'});});
+    $('chatForm').addEventListener('submit',async(e)=>{e.preventDefault();if(!session)return requireLogin();const text=$('chatInput').value.trim();if(!text)return;const p=getSessionPlayer(),senderName=isAdmin()?data.settings.adminName:p.name,senderRole=isAdmin()?'Administrator':leadershipLabel(p.id),message={id:uid('message'),senderId:p?.id||'admin',senderName,senderRole,text,createdAt:new Date().toISOString(),delivery:'sending'};data.chat.push(message);data.chat=data.chat.slice(-100);$('chatInput').value='';renderChat();const saved=await saveData();message.delivery=saved?'sent':'failed';renderChat();if(saved)sendPushNotification({title:`${senderName} · Ball Kho Gayi XI`,body:text,url:'/#/chat',tag:'group-chat',type:'chat'});});
 
-    $('flipCoinBtn').addEventListener('click',()=>{const opponent=$('tossOpponent').value||'Opponent',call=$('tossCall').value,result=Math.random()<.5?'Heads':'Tails',won=call===result;tossState={result,winner:won?data.settings.groupName:opponent,opponent};$('coin').classList.remove('flip-heads','flip-tails');void $('coin').offsetWidth;$('coin').classList.add(result==='Heads'?'flip-heads':'flip-tails');$('coinLabel').textContent='Coin in the air…';$('decisionButtons').classList.add('hidden');setTimeout(()=>{$('coinLabel').textContent=`${result}! ${tossState.winner} won.`;$('tossWinnerText').textContent='Choose bat or bowl:';$('decisionButtons').classList.remove('hidden');},1300);});
-    $$('[data-decision]').forEach((b)=>b.addEventListener('click',()=>{if(!tossState.winner)return toast('Flip the coin first');data.settings.savedToss={winner:tossState.winner,decision:b.dataset.decision,opponent:tossState.opponent,result:tossState.result,savedAt:new Date().toISOString()};saveData();renderToss();toast('Toss saved');}));
+    $('flipCoinBtn').addEventListener('click',()=>{if(!canManage())return requireLogin('Captain or vice-captain login required.');const opponent=$('tossOpponent').value||'Opponent',call=$('tossCall').value,result=Math.random()<.5?'Heads':'Tails',won=call===result;tossState={result,winner:won?data.settings.groupName:opponent,opponent};$('coin').classList.remove('flip-heads','flip-tails');void $('coin').offsetWidth;$('coin').classList.add(result==='Heads'?'flip-heads':'flip-tails');$('coinLabel').textContent='Coin in the air…';$('decisionButtons').classList.add('hidden');setTimeout(()=>{$('coinLabel').textContent=`${result}! ${tossState.winner} won.`;$('tossWinnerText').textContent='Choose bat or bowl:';$('decisionButtons').classList.remove('hidden');},1300);});
+    $$('[data-decision]').forEach((b)=>b.addEventListener('click',()=>{if(!canManage())return requireLogin('Captain or vice-captain login required.');if(!tossState.winner)return toast('Flip the coin first');data.settings.savedToss={winner:tossState.winner,decision:b.dataset.decision,opponent:tossState.opponent,result:tossState.result,savedAt:new Date().toISOString()};saveData();renderToss();toast('Toss saved');}));
 
     $$('[data-stat]').forEach((b)=>b.addEventListener('click',()=>{statMode=b.dataset.stat;$$('[data-stat]').forEach((x)=>x.classList.toggle('active',x===b));renderStats();}));
-    $('editNoticeBtn').addEventListener('click',()=>{if(!canManage())return requireLogin();$('noticeTitleInput').value=data.settings.announcementTitle;$('noticeTextInput').value=data.settings.announcementText;openModal('noticeModal');}); $('noticeForm').addEventListener('submit',(e)=>{e.preventDefault();data.settings.announcementTitle=$('noticeTitleInput').value.trim();data.settings.announcementText=$('noticeTextInput').value.trim();saveData();sendPushNotification({title:data.settings.announcementTitle||'Captain Announcement',body:data.settings.announcementText,url:'/#home',tag:'captain-announcement',type:'announcement'});closeModal('noticeModal');renderSummary();renderPremiumHome();toast('Notice published');});
+    $('editNoticeBtn').addEventListener('click',()=>{if(!canManage())return requireLogin();$('noticeTitleInput').value=data.settings.announcementTitle;$('noticeTextInput').value=data.settings.announcementText;openModal('noticeModal');}); $('noticeForm').addEventListener('submit',(e)=>{e.preventDefault();data.settings.announcementTitle=$('noticeTitleInput').value.trim();data.settings.announcementText=$('noticeTextInput').value.trim();saveData();sendPushNotification({title:data.settings.announcementTitle||'Captain Announcement',body:data.settings.announcementText,url:'/#/home',tag:'captain-announcement',type:'announcement'});closeModal('noticeModal');renderSummary();renderPremiumHome();toast('Notice published');});
 
     $('saveSettingsBtn').addEventListener('click',async()=>{if(!isAdmin())return;const captain=$('captainSelect').value,vice=$('viceCaptainSelect').value,newPin=$('adminPinInput').value.trim();if(captain&&vice&&captain===vice)return toast('Captain and vice-captain must be different');if(newPin&&!validPin(newPin))return toast('Admin PIN must contain 4–6 numbers');let hero=data.settings.heroImage,logo=data.settings.logoImage;try{if($('heroImageInput').files[0])hero=await readCompressedImage($('heroImageInput').files[0],1600,1200,.82);if($('logoImageInput').files[0])logo=await readCompressedImage($('logoImageInput').files[0],512,512,.82);}catch(err){return toast(err.message);}Object.assign(data.settings,{groupName:$('groupNameInput').value.trim()||'Ball Kho Gayi XI',tagline:$('taglineInput').value.trim()||'Bat · Ball · Repeat',heroTitle:$('heroTitleInput').value.trim(),heroSubtitle:$('heroSubtitleInput').value.trim(),homeGround:$('homeGroundInput').value.trim(),whatsappGroupUrl:$('whatsappGroupInput').value.trim(),captainId:captain,viceCaptainId:vice,heroImage:hero,logoImage:logo});if(newPin)data.settings.adminPinHash=await hashPin(newPin);$('adminPinInput').value='';saveData();renderAll();toast('Website settings saved');});
     $('exportBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ball-kho-gayi-xi-backup.json';a.click();URL.revokeObjectURL(url);}); $('importInput').addEventListener('change',async(e)=>{const file=e.target.files[0];if(!file)return;try{data=migrateData(JSON.parse(await file.text()));saveData();renderAll();toast('Backup imported');}catch{toast('Invalid backup file');}e.target.value='';}); $('resetBtn').addEventListener('click',()=>askConfirm('Reset all website data?','This restores the original squad, matches and settings.',()=>{data=migrateData(deepClone(seedData));session=null;saveSession();saveData();renderAll();toast('Website reset');}));
@@ -916,9 +1055,10 @@
       if(target.dataset.addOpponentPlayer)return openOpponentPlayerModal(target.dataset.addOpponentPlayer);
       if(target.dataset.editOpponentPlayer)return openOpponentPlayerModal(target.dataset.teamId,target.dataset.editOpponentPlayer);
       if(target.dataset.deleteOpponentPlayer){const t=data.opponentTeams.find((x)=>x.id===target.dataset.teamId);if(t)t.players=t.players.filter((p)=>p.id!==target.dataset.deleteOpponentPlayer);saveData();renderAll();}
-      if(target.dataset.approveRequest){const r=data.joinRequests.find((x)=>x.id===target.dataset.approveRequest);if(!r)return;if(!jerseyAvailable(r.jersey))return toast('That jersey is already taken. Edit the request after approval.');data.players.push({id:uid('player'),name:r.name,phone:r.phone,jersey:r.jersey,role:r.role,className:r.className,note:r.note,photo:r.photo,pinHash:r.pinHash,battingStyle:'Right-hand bat',bowlingStyle:'Does not bowl',status:'active'});data.joinRequests=data.joinRequests.filter((x)=>x.id!==r.id);saveData();sendPushNotification({title:'New Player Added',body:`${r.name} has joined ${data.settings.groupName}.`,url:'/#teams',tag:'player-approved',type:'team'});renderAll();toast('Player approved');}
+      if(target.dataset.approveRequest){const r=data.joinRequests.find((x)=>x.id===target.dataset.approveRequest);if(!r)return;if(!jerseyAvailable(r.jersey))return toast('That jersey is already taken. Edit the request after approval.');data.players.push({id:uid('player'),name:r.name,phone:r.phone,jersey:r.jersey,role:r.role,className:r.className,note:r.note,photo:r.photo,pinHash:r.pinHash,battingStyle:'Right-hand bat',bowlingStyle:'Does not bowl',status:'active'});data.joinRequests=data.joinRequests.filter((x)=>x.id!==r.id);saveData();sendPushNotification({title:'New Player Added',body:`${r.name} has joined ${data.settings.groupName}.`,url:'/#/squad',tag:'player-approved',type:'team'});renderAll();toast('Player approved');}
       if(target.dataset.rejectRequest){data.joinRequests=data.joinRequests.filter((x)=>x.id!==target.dataset.rejectRequest);saveData();renderAll();toast('Request rejected');}
       if(target.dataset.movePractice){const p=target.dataset.movePractice,from=target.dataset.from;if(from==='A'){data.practiceTeams.teamA=data.practiceTeams.teamA.filter((id)=>id!==p);data.practiceTeams.teamB.push(p);}else{data.practiceTeams.teamB=data.practiceTeams.teamB.filter((id)=>id!==p);data.practiceTeams.teamA.push(p);}data.practiceTeams.updatedAt=new Date().toISOString();saveData();renderPractice();}
+      if(target.dataset.retryMessage){const message=data.chat.find((m)=>m.id===target.dataset.retryMessage);if(!message)return;message.delivery='sending';renderChat();saveData().then((saved)=>{message.delivery=saved?'sent':'failed';renderChat();if(saved)toast('Message sent');});return;}
       if(target.dataset.deleteMessage){data.chat=data.chat.filter((m)=>m.id!==target.dataset.deleteMessage);saveData();renderChat();}
     });
 
@@ -935,7 +1075,7 @@
 
   async function startApp(){
     applyTheme(localStorage.getItem('ballKhoTheme') === 'dark' ? 'dark' : 'light', false);
-    await loadDataFromServer(); session=loadSession(); bindEvents(); renderAll(); await initializePushNotifications(); setInterval(refreshFromServer,30000);
+    await loadDataFromServer(); session=loadSession(); bindEvents(); renderAll(); appReady=true; window.dispatchEvent(new CustomEvent('bkgxi:ready')); await initializePushNotifications(); setInterval(refreshFromServer,30000); setInterval(()=>{const route=window.BKGXIRouter?.current?.();if(route==='chat'||route==='live-scoring')refreshFromServer();},8000); window.addEventListener('online',()=>{if(pendingLocalSave)saveData();});
   }
 
   startApp().catch((error)=>{console.error('Application startup failed:',error);toast('Could not start the app. Refresh the page.');});

@@ -64,6 +64,7 @@
 
   function routeAllowed(route, target) {
     if (!target) return false;
+    if (route === 'toss' && !window.BKGXIApp?.canManage?.()) return false;
     if (target.classList.contains('permission-hidden')) return false;
     if (route.startsWith('admin') && target.classList.contains('hidden')) return false;
     if (route === 'profile' && target.classList.contains('hidden')) return false;
@@ -78,6 +79,7 @@
     if (!routeAllowed(route, target) && route !== 'home') {
       if (route === 'profile') document.getElementById('loginBtn')?.click();
       else if (route.startsWith('admin')) document.getElementById('loginBtn')?.click();
+      else if (route === 'toss') window.BKGXIApp?.toast?.('Toss is available only to the captain and vice-captain.');
       return showRoute('home', '', { scroll });
     }
 
@@ -107,6 +109,7 @@
   }
 
   function navigate(route, param = '') {
+    if (route === 'game') { window.location.href = '/game.html'; return; }
     const normalized = route === 'teams' ? 'squad' : route === 'my-dashboard' ? 'profile' : route;
     const nextHash = `#/${normalized}${param ? `/${encodeURIComponent(param)}` : ''}`;
     if (window.location.hash === nextHash) showRoute(normalized, param);
