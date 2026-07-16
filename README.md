@@ -67,3 +67,19 @@ Add these in **Vercel → Project Settings → Environment Variables** for Produ
 Do not place the private key in `public/`, GitHub, HTML, or frontend JavaScript. A separate private setup text file is supplied next to the ZIP.
 
 After adding the variables, redeploy once. Each player must log in and tap **Enable Notifications** on their own phone. Android will then ask for notification permission.
+
+## Phase 3: App Shell + Premium Home
+
+This package includes the approved first redesign increment only:
+
+- Lightweight hash router with screen isolation
+- Premium Home screen containing only live match, upcoming match, recent result, announcement and role-based quick actions
+- Fixed five-item mobile navigation: Home, Matches, Squad, Chat and Profile
+- Reusable design tokens and modular Home/app-shell styles
+- Existing screens preserved as routed legacy views while they are upgraded one at a time
+- Existing authentication, API endpoints, MongoDB state shape, push notifications and Android verification unchanged
+- Service-worker cache bumped to `ball-kho-gayi-xi-v8-home-shell`
+
+### Review before production
+
+Deploy this package as a Vercel Preview first. Test player, captain, vice-captain and administrator login before promoting it to Production. The next screen should not be implemented until the Home screen is approved.

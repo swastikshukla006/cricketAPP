@@ -1,0 +1,60 @@
+:root{
+  --app-bg:#eef1e8;
+  --app-surface:#fbfcf7;
+  --app-surface-strong:#ffffff;
+  --app-text:#142019;
+  --app-muted:#657167;
+  --app-primary:#173f28;
+  --app-primary-2:#2e6a42;
+  --app-accent:#d8b13c;
+  --app-live:#e2443a;
+  --app-success:#2f7d48;
+  --app-danger:#bf4540;
+  --app-outline:rgba(20,32,25,.12);
+  --app-glass:rgba(251,252,247,.82);
+  --app-shadow-sm:0 10px 30px rgba(25,45,30,.08);
+  --app-shadow-lg:0 26px 70px rgba(20,43,27,.16);
+  --app-radius-sm:12px;
+  --app-radius-md:18px;
+  --app-radius-lg:26px;
+  --app-space-1:4px;
+  --app-space-2:8px;
+  --app-space-3:12px;
+  --app-space-4:16px;
+  --app-space-5:24px;
+  --app-space-6:32px;
+  --app-space-7:48px;
+  --app-nav-height:76px;
+
+  /* Keep the legacy interface visually aligned while screens migrate. */
+  --bg:var(--app-bg);
+  --paper:var(--app-surface);
+  --ink:var(--app-text);
+  --muted:var(--app-muted);
+  --green:var(--app-primary-2);
+  --gold:var(--app-accent);
+  --red:var(--app-danger);
+  --line:var(--app-outline);
+  --shadow:var(--app-shadow-lg);
+}
+body.dark{
+  --app-bg:#07110c;
+  --app-surface:#101b14;
+  --app-surface-strong:#142219;
+  --app-text:#f2f5ed;
+  --app-muted:#a8b3aa;
+  --app-primary:#9ac47f;
+  --app-primary-2:#78a961;
+  --app-accent:#e6c45b;
+  --app-outline:rgba(255,255,255,.12);
+  --app-glass:rgba(15,27,19,.84);
+  --app-shadow-sm:0 12px 34px rgba(0,0,0,.28);
+  --app-shadow-lg:0 30px 80px rgba(0,0,0,.42);
+  --bg:var(--app-bg);
+  --paper:var(--app-surface);
+  --ink:var(--app-text);
+  --muted:var(--app-muted);
+  --green:var(--app-primary-2);
+  --gold:var(--app-accent);
+  --line:var(--app-outline);
+}

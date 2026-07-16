@@ -12,23 +12,25 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&display=swap" rel="stylesheet" />
   <link rel="icon" href="assets/logo-64.png" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/app-shell.css" />
+  <link rel="stylesheet" href="css/screens/home.css" />
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
 
   <header class="topbar">
-    <a class="brand" href="#home" aria-label="Ball Kho Gayi XI home">
+    <a class="brand" href="#/home" data-route="home" aria-label="Ball Kho Gayi XI home">
       <img id="headerLogo" src="assets/logo-64.png" alt="Ball Kho Gayi XI logo" />
       <span><strong id="brandName">Ball Kho Gayi XI</strong><small id="brandTagline">Bat · Ball · Repeat</small></span>
     </a>
     <nav class="desktop-nav" aria-label="Main navigation">
-      <a href="#matches">Matches</a>
-      <a href="#live-scoring" data-manager-only>Live Score</a>
-      <a href="#teams">Teams</a>
-      <a href="#practice">Team Maker</a>
-      <a href="#chat">Chat</a>
-      <a href="#stats">Stats</a>
-      <a href="#admin" data-admin-only>Admin</a>
+      <a href="#/home" data-route="home">Home</a>
+      <a href="#/matches" data-route="matches">Matches</a>
+      <a href="#/squad" data-route="squad">Squad</a>
+      <a href="#/chat" data-route="chat">Chat</a>
+      <a href="#/profile" data-route="profile">Profile</a>
+      <a href="#/admin" data-route="admin" data-admin-only>Admin</a>
     </nav>
     <div class="header-actions">
       <button class="pill-btn" id="loginBtn" type="button">Log in / Join</button>
@@ -45,8 +47,98 @@
     <span id="mobileThemeText">Dark</span>
   </button>
 
-  <main id="home">
-    <section class="front-hero" id="frontHero">
+  <main id="home" class="app-main">
+    <section id="appHomeView" class="app-view home-view" data-route-view="home" aria-labelledby="homeHeading">
+      <div class="app-view-shell">
+        <header class="home-welcome">
+          <div class="home-team-lockup">
+            <img class="home-team-logo" id="homeTeamLogo" src="assets/ball-kho-gayi-circle.png" alt="Ball Kho Gayi XI logo" />
+            <div>
+              <p class="home-kicker" id="homeGreeting">Welcome to</p>
+              <h1 class="home-title" id="homeHeading">Ball Kho Gayi XI</h1>
+              <span class="home-role" id="homeRoleBadge">Team hub</span>
+            </div>
+          </div>
+          <button class="home-profile-button" id="homeProfileButton" type="button" aria-label="Open profile">
+            <span id="homeProfileAvatar">XI</span>
+          </button>
+        </header>
+
+        <div class="home-layout">
+          <article class="home-card home-live-card" id="homeLiveCard" aria-labelledby="homeLiveOpponent">
+            <div class="home-card-inner">
+              <div class="home-live-top">
+                <span class="home-live-pill" id="homeLiveStatus">No live match</span>
+                <span class="home-live-over" id="homeLiveOver">Ready when the toss is done</span>
+              </div>
+              <p class="home-live-opponent" id="homeLiveOpponent">The scoreboard is waiting</p>
+              <p class="home-live-score" id="homeLiveScore">0/0</p>
+              <div class="home-live-meta" id="homeLiveMeta"><span>0.0 overs</span><span>Run rate 0.00</span></div>
+              <div class="home-live-footer">
+                <div class="home-live-batters" id="homeLiveBatters"><span>No innings in progress</span><span>Leadership can start scoring from Quick Actions.</span></div>
+                <button class="home-live-action" id="homeLiveAction" type="button" data-home-action="live">Start live score</button>
+              </div>
+            </div>
+          </article>
+
+          <div class="home-secondary-grid">
+            <article class="home-card home-fixture-card" id="homeUpcomingCard">
+              <div class="home-card-inner">
+                <div class="home-card-head">
+                  <p class="home-section-label">Upcoming match</p>
+                  <div class="home-date-chip" id="homeUpcomingDate"><strong>—</strong><span>TBA</span></div>
+                </div>
+                <h2 id="homeUpcomingOpponent">No fixture scheduled</h2>
+                <p class="home-card-copy" id="homeUpcomingMeta">The next match will appear here when leadership schedules it.</p>
+                <div class="home-card-footer">
+                  <span class="home-status" id="homeUpcomingStatus">Not scheduled</span>
+                  <button class="home-text-action" type="button" data-home-action="matches">View matches →</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="home-card home-result-card" id="homeRecentResultCard">
+              <div class="home-card-inner">
+                <div class="home-card-head">
+                  <p class="home-section-label">Recent result</p>
+                  <span class="home-status" id="homeRecentOutcome">No result</span>
+                </div>
+                <h2 id="homeRecentOpponent">No completed match yet</h2>
+                <div class="home-result-score" id="homeRecentScores">
+                  <div><small>Ball Kho Gayi XI</small><strong>—</strong></div>
+                  <div><small>Opponent</small><strong>—</strong></div>
+                </div>
+                <div class="home-card-footer">
+                  <span class="home-card-copy" id="homeRecentSummary">Completed scorecards will appear here.</span>
+                  <button class="home-text-action" type="button" data-home-action="matches">Scorecards →</button>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <article class="home-card home-announcement">
+            <div class="home-announcement-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 13.5V10l12-5v13L4 13.5Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 14v5h4l-1.5-4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </div>
+            <div>
+              <p class="home-section-label">Announcement</p>
+              <h2 id="homeAnnouncementTitle">Captain’s board</h2>
+              <p id="homeAnnouncementText">Team announcements will appear here.</p>
+            </div>
+            <button class="home-text-action" id="homeAnnouncementAction" type="button" data-home-action="notice" data-manager-only>Edit →</button>
+          </article>
+
+          <section class="home-quick" aria-labelledby="homeQuickTitle">
+            <div class="home-quick-header">
+              <div><p class="home-section-label">Shortcuts</p><h2 id="homeQuickTitle">Quick actions</h2></div>
+              <p id="homeQuickCaption">The most useful actions for your role.</p>
+            </div>
+            <div class="home-actions-grid" id="homeQuickActions"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+    <section class="front-hero" id="frontHero" data-legacy-home>
       <img class="front-image" id="heroImage" src="assets/cric-time-front.jpg" alt="School cricket on a green ground surrounded by hills" />
       <div class="front-shade"></div>
       <div class="front-content section-shell">
@@ -68,14 +160,14 @@
       </div>
     </section>
 
-    <section class="quick-strip" aria-label="Team summary">
+    <section class="quick-strip" aria-label="Team summary" data-legacy-home>
       <div><strong id="heroPlayers">0</strong><span>Our players</span></div>
       <div><strong id="heroMatches">0</strong><span>Matches</span></div>
       <div><strong id="heroWins">0</strong><span>Wins</span></div>
       <div><strong id="heroRuns">0</strong><span>Runs logged</span></div>
     </section>
 
-    <section id="my-dashboard" class="section-shell section-block hidden">
+    <section id="my-dashboard" class="section-shell section-block legacy-route-screen hidden" data-route-view="profile">
       <div class="section-head">
         <div><p class="eyebrow" id="dashboardEyebrow">My Dressing Room</p><h2 id="dashboardGreeting">Welcome back</h2><p id="dashboardSubtitle">Your next fixture and personal performance.</p></div>
         <div class="section-actions"><button class="secondary-btn small" id="editProfileBtn" type="button">Edit My Profile</button><button class="secondary-btn small" id="changePinBtn" type="button">Change PIN</button><button class="danger-btn small" id="logoutBtn" type="button">Log out</button></div>
@@ -97,21 +189,21 @@
       </div>
     </section>
 
-    <section class="section-shell section-block overview-grid">
+    <section class="section-shell section-block overview-grid" data-legacy-home>
       <article class="panel record-card"><p class="eyebrow">Season record</p><h2 id="seasonRecord">0W · 0L</h2><p>Every completed scorecard updates this automatically.</p></article>
       <article class="panel notice-card"><p class="eyebrow">Captain’s Board</p><h3 id="announcementTitle">Carry the score notebook.</h3><p id="announcementText">Write down every run, wicket and catch so the match can be uploaded later.</p><button class="text-btn" id="editNoticeBtn" data-manager-only>Edit notice →</button></article>
       <article class="panel leader-mini"><span>Top batter</span><strong id="topBatter">—</strong><small id="topBatterStat">0 runs</small></article>
       <article class="panel leader-mini"><span>Top bowler</span><strong id="topBowler">—</strong><small id="topBowlerStat">0 wickets</small></article>
     </section>
 
-    <section id="matches" class="section-shell section-block">
+    <section id="matches" class="section-shell section-block legacy-route-screen" data-route-view="matches">
       <div class="section-head"><div><p class="eyebrow">Match Center</p><h2>Fixtures and scorecards</h2></div><div class="section-actions"><button class="secondary-btn small" id="scheduleBtn" data-manager-only>Schedule Match</button><button class="primary-btn small" id="startLiveBtn" data-manager-only>Start Live Score</button><button class="secondary-btn small" id="quickResultBtn" data-manager-only>Add Completed Match</button></div></div>
       <div class="filter-row"><button class="filter active" data-match-filter="all">All</button><button class="filter" data-match-filter="Upcoming">Upcoming</button><button class="filter" data-match-filter="Completed">Completed</button></div>
       <div id="matchGrid" class="card-grid three"></div><div id="matchEmpty" class="empty hidden">No matches here yet.</div>
     </section>
 
 
-    <section id="live-scoring" class="section-shell section-block live-score-section" data-manager-only>
+    <section id="live-scoring" class="section-shell section-block live-score-section legacy-route-screen" data-route-view="live-scoring" data-manager-only>
       <div class="section-head">
         <div><p class="eyebrow">Live Scoring</p><h2>Score every ball from your phone</h2><p>Admin, captain and vice-captain can score. The scoreboard saves to MongoDB and updates on every device.</p></div>
         <div class="section-actions"><button class="secondary-btn small" id="liveSetupBtn" type="button">Match Setup</button><button class="secondary-btn small" id="liveUndoBtn" type="button">Undo</button><button class="danger-btn small" id="liveResetBtn" type="button">Reset</button></div>
@@ -140,20 +232,20 @@
       </div>
     </section>
 
-    <section id="teams" class="section-shell section-block">
+    <section id="teams" class="section-shell section-block legacy-route-screen" data-route-view="squad">
       <div class="section-head"><div><p class="eyebrow">Team Room</p><h2>Our squad and opponents</h2><p>Our players always stay under Ball Kho Gayi XI. Opponent teams and their players can change for every match.</p></div><div class="section-actions"><button class="primary-btn small" id="addOpponentTeamBtn" data-admin-only>Add Opponent Team</button></div></div>
       <article class="our-team panel"><div class="team-title"><img id="teamSectionLogo" src="assets/ball-kho-gayi-circle.png" alt="Ball Kho Gayi XI logo" /><div><span>Our Team</span><h3 id="ourTeamName">Ball Kho Gayi XI</h3><small><b id="captainName">Swastik</b> · Captain &nbsp; <b id="viceCaptainName">Ananya</b> · Vice-Captain</small></div></div><div id="ourPlayerGrid" class="player-grid"></div></article>
       <div class="section-head subhead"><div><p class="eyebrow">Opponent Directory</p><h3>Teams we play</h3></div></div>
       <div id="opponentTeamGrid" class="card-grid two"></div><div id="opponentEmpty" class="empty hidden">No opponent team added yet. Admin can create teams whenever needed.</div>
     </section>
 
-    <section id="practice" class="section-shell section-block practice-section">
+    <section id="practice" class="section-shell section-block practice-section legacy-route-screen" data-route-view="practice">
       <div class="section-head"><div><p class="eyebrow">Practice Team Maker</p><h2>Split our squad for an internal game</h2><p>Shuffle everyone into two balanced sides, then move individual players if required.</p></div><div class="section-actions"><button class="primary-btn small" id="shuffleTeamsBtn" data-manager-only>Shuffle Teams</button><button class="secondary-btn small" id="renamePracticeBtn" data-manager-only>Rename Sides</button></div></div>
       <div class="practice-grid"><article class="practice-team panel"><span class="team-dot green"></span><h3 id="practiceNameA">Team Green</h3><div id="practiceTeamA" class="practice-list"></div></article><div class="versus">VS</div><article class="practice-team panel"><span class="team-dot gold"></span><h3 id="practiceNameB">Team Gold</h3><div id="practiceTeamB" class="practice-list"></div></article></div>
       <p class="updated-note" id="practiceUpdated">Teams have not been distributed yet.</p>
     </section>
 
-    <section id="chat" class="section-shell section-block">
+    <section id="chat" class="section-shell section-block legacy-route-screen" data-route-view="chat">
       <div class="section-head"><div><p class="eyebrow">Dressing Room Chat</p><h2>Group chat</h2><p>Shared through MongoDB, so messages appear on every phone.</p></div></div>
       <div class="chat-layout">
         <article class="panel chat-panel"><div id="chatMessages" class="chat-messages"></div><form id="chatForm" class="chat-form"><input id="chatInput" maxlength="280" placeholder="Log in to send a message" autocomplete="off" /><button class="primary-btn small" type="submit">Send</button></form><small id="chatStatus">Player login required to post.</small></article>
@@ -170,17 +262,17 @@
       </div>
     </section>
 
-    <section id="toss" class="section-shell section-block">
+    <section id="toss" class="section-shell section-block legacy-route-screen" data-route-view="toss">
       <div class="section-head"><div><p class="eyebrow">Toss Room</p><h2>Flip before the match</h2></div></div>
       <div class="two-col"><article class="panel form-stack"><label>Opponent<select id="tossOpponent"></select></label><label>Our call<select id="tossCall"><option>Heads</option><option>Tails</option></select></label><button class="primary-btn wide" id="flipCoinBtn">Flip Coin</button><div id="decisionButtons" class="section-actions hidden"><button class="secondary-btn small" data-decision="Bat">Bat first</button><button class="secondary-btn small" data-decision="Bowl">Bowl first</button></div><p id="tossWinnerText"></p></article><article class="panel coin-stage"><div class="coin" id="coin"><span>H</span><span>T</span></div><h3 id="coinLabel">Ready for the toss</h3><p id="savedToss">No toss saved yet.</p></article></div>
     </section>
 
-    <section id="stats" class="section-shell section-block">
+    <section id="stats" class="section-shell section-block legacy-route-screen" data-route-view="stats">
       <div class="section-head"><div><p class="eyebrow">Statistics Lab</p><h2>Season leaderboards</h2></div><div class="filter-row"><button class="filter active" data-stat="runs">Runs</button><button class="filter" data-stat="wickets">Wickets</button><button class="filter" data-stat="catches">Catches</button><button class="filter" data-stat="strikeRate">Strike Rate</button><button class="filter" data-stat="economy">Economy</button></div></div>
       <div class="stats-layout"><article class="panel podium" id="podium"></article><article class="panel table-wrap"><table><thead id="leaderHead"></thead><tbody id="leaderRows"></tbody></table></article></div>
     </section>
 
-    <section id="admin" class="section-shell section-block hidden" data-admin-only>
+    <section id="admin" class="section-shell section-block legacy-route-screen hidden" data-route-view="admin" data-admin-only>
       <div class="section-head"><div><p class="eyebrow">Administrator</p><h2>Everything editable without code</h2><p>Change branding, leadership, players, teams and login settings here.</p></div></div>
       <div class="admin-grid">
         <article class="panel form-stack"><p class="eyebrow">Website Settings</p><label>Group name<input id="groupNameInput" maxlength="40" /></label><label>Tagline<input id="taglineInput" maxlength="60" /></label><label>Hero title<input id="heroTitleInput" maxlength="90" /></label><label>Hero subtitle<textarea id="heroSubtitleInput" rows="4" maxlength="240"></textarea></label><label>Home ground<input id="homeGroundInput" maxlength="80" /></label><label>WhatsApp group link<input id="whatsappGroupInput" type="url" maxlength="250" /></label><label>Captain<select id="captainSelect"></select></label><label>Vice-captain<select id="viceCaptainSelect"></select></label><label>New admin PIN (optional)<input id="adminPinInput" inputmode="numeric" maxlength="6" placeholder="Leave blank to keep current" /></label><label>Replace hero image<input id="heroImageInput" type="file" accept="image/*" /></label><label>Replace team logo<input id="logoImageInput" type="file" accept="image/*" /></label><button class="primary-btn wide" id="saveSettingsBtn">Save Website Settings</button></article>
@@ -191,15 +283,21 @@
     </section>
 
 
-    <section id="thankyou" class="section-shell section-block thankyou-section">
+    <section id="thankyou" class="section-shell section-block thankyou-section legacy-route-screen" data-route-view="about">
       <div class="thankyou-visual"><img id="thankYouLogo" src="assets/ball-kho-gayi-circle.png" alt="Ball Kho Gayi XI logo" /></div>
       <div class="thankyou-copy"><p class="eyebrow">Thank You, Cricket</p><h2>For every run, wicket, comeback and lost ball.</h2><p>Ball Kho Gayi XI is our shared cricket memory. Keep your profile updated, help the scorer, respect every teammate and make every school match count.</p><div class="section-actions"><a class="whatsapp-btn" id="thankWhatsappLink" href="https://chat.whatsapp.com/IHx3Ph3owBgFB0JYxm1vDp?s=cl&amp;p=a&amp;mlu=0&amp;ilr=0&amp;amv=2" target="_blank" rel="noreferrer">Join Our WhatsApp Group</a><a class="secondary-btn" href="assets/Ball-Kho-Gayi-XI-Player-Guide.pdf" target="_blank" rel="noreferrer">Open Player Guide PDF</a></div></div>
     </section>
 
-    <footer class="section-shell footer"><div class="brand footer-brand"><img id="footerLogo" src="assets/logo-64.png" alt=""><span><strong id="footerBrand">Ball Kho Gayi XI</strong><small>Bat · Ball · Repeat</small></span></div><p>Designed and developed by <strong>Swastik Shukla</strong></p><div><a href="mailto:jiking847@gmail.com">Email</a> · <a href="https://www.instagram.com/swastik_shukla__/" target="_blank" rel="noreferrer">Instagram</a></div></footer>
+    <footer class="section-shell footer legacy-route-screen" data-route-view="about"><div class="brand footer-brand"><img id="footerLogo" src="assets/logo-64.png" alt=""><span><strong id="footerBrand">Ball Kho Gayi XI</strong><small>Bat · Ball · Repeat</small></span></div><p>Designed and developed by <strong>Swastik Shukla</strong></p><div><a href="mailto:jiking847@gmail.com">Email</a> · <a href="https://www.instagram.com/swastik_shukla__/" target="_blank" rel="noreferrer">Instagram</a></div></footer>
   </main>
 
-  <nav class="mobile-nav"><a href="#home">⌂<span>Home</span></a><a href="#matches">▣<span>Matches</span></a><a href="#live-scoring" data-manager-only>●<span>Live</span></a><a href="#chat">◌<span>Chat</span></a><button id="mobileAccountBtn">◎<span>Account</span></button></nav>
+  <nav class="mobile-nav" aria-label="Primary navigation">
+    <a href="#/home" data-route="home" aria-label="Home"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span>Home</span></a>
+    <a href="#/matches" data-route="matches" aria-label="Matches"><svg viewBox="0 0 24 24"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M9 18h6M12 13v5M5 6H3v2a4 4 0 0 0 4 4M19 6h2v2a4 4 0 0 1-4 4"/></svg><span>Matches</span></a>
+    <a href="#/squad" data-route="squad" aria-label="Squad"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 15a5 5 0 0 1 7 4.5"/></svg><span>Squad</span></a>
+    <a href="#/chat" data-route="chat" aria-label="Chat"><span class="nav-badge" id="chatNavBadge">0</span><svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"/><path d="M8 10h8M8 14h5"/></svg><span>Chat</span></a>
+    <button id="mobileAccountBtn" type="button" data-route="profile" aria-label="Profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Profile</span></button>
+  </nav>
 
   <div class="modal" id="loginModal" aria-hidden="true"><div class="modal-box small-modal"><button class="close" data-close="loginModal">×</button><img class="modal-logo" src="assets/ball-kho-gayi-circle.png" alt=""><p class="eyebrow">Dressing Room Access</p><h2>Log in</h2><form id="loginForm" class="form-stack"><label>Account<select id="loginAccount"></select></label><label>Private PIN<input id="loginPin" type="password" inputmode="numeric" minlength="4" maxlength="6" required autocomplete="current-password" /></label><button class="primary-btn wide" type="submit">Enter</button></form><div class="join-callout"><strong>New to the team?</strong><p>Create a player request with your name, jersey, phone, photo and your own PIN.</p><button class="secondary-btn wide" id="openJoinBtn">Request to Join</button></div></div></div>
 
@@ -229,7 +327,9 @@
   <div class="modal" id="scorecardModal" aria-hidden="true"><div class="modal-box large-modal"><button class="close" data-close="scorecardModal">×</button><div id="scorecardContent"></div></div></div>
   <div class="confirm" id="confirmDialog"><div class="confirm-box"><h3 id="confirmTitle">Are you sure?</h3><p id="confirmText"></p><div class="section-actions"><button class="secondary-btn small" id="confirmCancel">Cancel</button><button class="danger-btn small" id="confirmOk">Continue</button></div></div></div>
   <div class="toast" id="toast"></div>
+  <div class="route-announcer" id="routeAnnouncer" aria-live="polite" aria-atomic="true"></div>
 
+  <script src="js/router.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
