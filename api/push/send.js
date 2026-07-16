@@ -4,6 +4,33 @@ import { getDatabase } from '../lib/mongodb.js';
 const COLLECTION_NAME = 'push_subscriptions';
 const VALID_ROLES = new Set(['Administrator', 'Captain', 'Vice-Captain']);
 
+const DEFAULT_PREFERENCES = Object.freeze({
+  matches: true,
+  live: true,
+  chat: true,
+  announcements: true,
+  team: true,
+  game: true
+});
+
+function preferenceCategory(type) {
+  if (type === 'chat') return 'chat';
+  if (type === 'live-score') return 'live';
+  if (type === 'announcement') return 'announcements';
+  if (type === 'game') return 'game';
+  if (['match', 'toss'].includes(type)) return 'matches';
+  if (['team', 'join-request', 'availability', 'practice', 'profile'].includes(type)) return 'team';
+  return '';
+}
+
+function allowsType(item, type) {
+  if (type === 'test' || type === 'security') return true;
+  const category = preferenceCategory(type);
+  if (!category) return true;
+  const preferences = { ...DEFAULT_PREFERENCES, ...(item.preferences || {}) };
+  return preferences[category] !== false;
+}
+
 function cleanText(value, max) {
   return String(value || '').trim().slice(0, max);
 }
@@ -38,6 +65,7 @@ export default async function handler(request, response) {
     if (!body) return response.status(400).json({ ok: false, error: 'Notification text is required.' });
 
     const audience = cleanText(request.body?.audience, 30) || 'all';
+    const notificationType = cleanText(request.body?.type, 40) || 'general';
     const targetUserId = cleanText(request.body?.targetUserId, 100);
     const targetEndpoint = cleanText(request.body?.targetEndpoint, 2048);
     const excludeEndpoint = cleanText(request.body?.excludeEndpoint, 2048);
@@ -46,14 +74,14 @@ export default async function handler(request, response) {
       body,
       url: cleanText(request.body?.url, 240) || '/#chat',
       tag: cleanText(request.body?.tag, 80) || 'criccircle-update',
-      type: cleanText(request.body?.type, 40) || 'general',
+      type: notificationType,
       timestamp: Date.now()
     });
 
     const database = await getDatabase();
     const collection = database.collection(COLLECTION_NAME);
     const all = await collection.find({ active: true }).limit(500).toArray();
-    const recipients = all.filter((item) => item.endpoint !== excludeEndpoint && matchesAudience(item, audience, targetUserId, targetEndpoint));
+    const recipients = all.filter((item) => item.endpoint !== excludeEndpoint && matchesAudience(item, audience, targetUserId, targetEndpoint) && allowsType(item, notificationType));
 
     const expiredEndpoints = [];
     const results = await Promise.allSettled(recipients.map(async (item) => {

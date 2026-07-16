@@ -151,7 +151,7 @@
 <p id="heroSubtitle">Record matches after school, follow personal form, build practice teams and keep the whole group together.</p>
 <div class="hero-actions">
 <button class="primary-btn" id="heroLoginBtn" type="button">Enter Dressing Room</button>
-<a class="glass-btn" href="#teams">See the Teams</a>
+<a class="glass-btn" data-route="squad" href="#/squad">See the Teams</a>
 </div>
 </div>
 <div class="hero-fixture glass-panel">
@@ -339,7 +339,21 @@
 <article class="premium-surface chat-panel"><div class="chat-connection"><span class="connection-dot" id="chatConnectionDot"></span><strong>Shared team room</strong><small id="chatStatus">Player login required to post.</small></div><div class="chat-messages" id="chatMessages"></div><button class="chat-jump-latest hidden" id="chatJumpLatest" type="button">↓ New messages</button><form class="chat-form" id="chatForm"><label class="sr-only" for="chatInput">Message</label><input autocomplete="off" id="chatInput" maxlength="280" placeholder="Log in to send a message"/><button class="primary-btn small" type="submit">Send</button></form></article>
 <aside class="premium-surface chat-rules" id="chatToolsPanel">
 <div class="card-title-row"><div><p class="screen-kicker">Chat tools</p><h2>Stay connected</h2></div><img alt="" class="feature-icon" src="assets/ui-icons/mobile-check.png"/></div>
-<div class="notification-card" id="notificationCard"><div class="notification-card-head"><span class="notification-bell">🔔</span><div><strong>Phone notifications</strong><small id="notificationStatus">Checking notification support…</small></div></div><button class="primary-btn wide" id="notificationToggleBtn" type="button">Enable notifications</button><button class="secondary-btn wide hidden" id="notificationTestBtn" type="button">Send test notification</button><small>Receive chat, match and important live-score updates when the app is closed.</small></div>
+<div class="notification-card" id="notificationCard">
+<div class="notification-card-head"><span class="notification-bell">🔔</span><div><strong>Phone notifications</strong><small id="notificationStatus">Checking notification support…</small></div></div>
+<button class="primary-btn wide" id="notificationToggleBtn" type="button">Enable notifications</button>
+<button class="secondary-btn wide hidden" id="notificationTestBtn" type="button">Send test notification</button>
+<div class="notification-preferences" id="notificationPreferences">
+<p>Notify me about</p>
+<label><input checked data-notification-pref="matches" type="checkbox"/> Fixtures, results and toss</label>
+<label><input checked data-notification-pref="live" type="checkbox"/> Live score and wickets</label>
+<label><input checked data-notification-pref="chat" type="checkbox"/> Team chat</label>
+<label><input checked data-notification-pref="announcements" type="checkbox"/> Captain announcements</label>
+<label><input checked data-notification-pref="team" type="checkbox"/> Availability, squad and practice teams</label>
+<label><input checked data-notification-pref="game" type="checkbox"/> Boundary Blitz records</label>
+</div>
+<small>Notification choices are saved for this phone and synced with its push subscription.</small>
+</div>
 <a class="whatsapp-btn wide" href="#" id="chatWhatsappLink" rel="noreferrer" target="_blank">Open Cricket WhatsApp Group</a>
 <div class="chat-guidelines"><strong>Keep the room useful</strong><p>Match timing, availability, ground, kit and friendly team discussion.</p></div>
 </aside>
@@ -431,7 +445,19 @@
 <div aria-hidden="true" class="modal profile-editor-modal" id="profileModal"><div class="modal-box profile-editor-box">
 <header class="profile-editor-head"><div><p class="eyebrow">My Profile</p><h2>Edit your details</h2><p>Changes sync to every device after saving.</p></div><button aria-label="Close profile editor" class="close" data-close="profileModal" type="button">×</button></header>
 <form class="form-grid" id="profileForm">
-<div class="profile-photo-editor full"><div class="profile-photo large" id="profilePhotoPreview"><span>XI</span></div><label class="secondary-btn">Choose photo<input accept="image/*" id="profilePhoto" type="file"/></label><small>JPG, PNG or WebP. The image is compressed before saving.</small></div>
+<div class="profile-photo-editor full">
+<div class="profile-photo large" id="profilePhotoPreview"><span>XI</span></div>
+<div class="profile-photo-controls">
+<div class="profile-photo-actions">
+<button class="secondary-btn" id="profilePhotoChooseBtn" type="button">Choose from gallery</button>
+<button class="secondary-btn" id="profileCameraBtn" type="button">Take photo</button>
+<button class="text-btn danger-text" id="profilePhotoRemoveBtn" type="button">Remove photo</button>
+</div>
+<input accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*" class="visually-hidden-file" id="profilePhoto" type="file"/>
+<input accept="image/*" capture="user" class="visually-hidden-file" id="profileCamera" type="file"/>
+<small aria-live="polite" id="profilePhotoStatus">Choose a JPG, PNG or WebP image up to 15 MB. It will be compressed before saving.</small>
+</div>
+</div>
 <label>Full name<input id="profileName" maxlength="40" required=""/></label>
 <label>Phone number<input id="profilePhone" inputmode="tel" maxlength="15"/></label>
 <label>Jersey number<input id="profileJersey" max="999" min="0" required="" type="number"/><small id="profileJerseyStatus"></small></label>
@@ -458,6 +484,6 @@
 <div class="toast" id="toast"></div>
 <div aria-atomic="true" aria-live="polite" class="route-announcer" id="routeAnnouncer"></div>
 <script src="js/router.js"></script>
-<script src="app.js"></script><script src="js/final-ui.js"></script><script src="js/production-ux.js"></script>
+<script src="app.js"></script><script src="js/final-ui.js"></script><script src="js/production-ux.js"></script><script src="js/button-reliability.js?v=15"></script>
 </body>
 </html>

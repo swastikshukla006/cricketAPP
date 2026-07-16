@@ -2,6 +2,20 @@ import { getDatabase } from '../lib/mongodb.js';
 
 const COLLECTION_NAME = 'push_subscriptions';
 
+const DEFAULT_PREFERENCES = Object.freeze({
+  matches: true,
+  live: true,
+  chat: true,
+  announcements: true,
+  team: true,
+  game: true
+});
+
+function cleanPreferences(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  return Object.fromEntries(Object.entries(DEFAULT_PREFERENCES).map(([key, fallback]) => [key, source[key] === undefined ? fallback : Boolean(source[key])]));
+}
+
 function validSubscription(value) {
   return Boolean(
     value && typeof value === 'object' &&
@@ -32,6 +46,7 @@ export default async function handler(request, response) {
         userId: cleanText(identity.userId, 100),
         userName: cleanText(identity.userName, 80),
         role: cleanText(identity.role, 40) || 'Player',
+        preferences: cleanPreferences(request.body?.preferences),
         userAgent: cleanText(request.headers['user-agent'], 240),
         active: true,
         updatedAt: now

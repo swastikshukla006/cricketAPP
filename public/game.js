@@ -166,11 +166,25 @@ async function submitScore(entry){
   if(!response.ok)throw new Error(payload.error||'API unavailable');
   return payload;
 }
+async function notifyIfNewLeader(entry){
+  if(!entry?.playerId||Number(entry.score||0)<=0)return;
+  try{
+    const boardResponse=await fetch('/api/game-leaderboard?limit=1',{cache:'no-store'});
+    if(!boardResponse.ok)return;
+    const board=await boardResponse.json();
+    const top=board.scores?.[0];
+    if(!top||top.playerId!==entry.playerId||Number(top.score)!==Number(entry.score))return;
+    const key=`${top.playerId}:${top.score}:${top.perfects||0}`;
+    if(localStorage.getItem('bb_last_leader_notification')===key)return;
+    const response=await fetch('/api/push/send',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({title:'New Boundary Blitz leader!',body:`${top.name} leads the team with ${top.score} points.`,url:'/game.html#leaderboard',tag:'boundary-blitz-leader',type:'game'})});
+    if(response.ok)localStorage.setItem('bb_last_leader_notification',key);
+  }catch{/* leaderboard notifications are best effort */}
+}
 async function syncPendingScores(){
   if(!navigator.onLine)return;
   const scores=getLocalScores();let changed=false,synced=0;
   for(const entry of scores.filter(item=>item.synced!==true)){
-    try{await submitScore(entry);entry.synced=true;changed=true;synced++;}catch{break}
+    try{const result=await submitScore(entry);entry.synced=true;changed=true;synced++;if(!result?.duplicate)await notifyIfNewLeader(entry);}catch{break}
   }
   if(changed)setLocalScores(scores);
   if(synced)showBadge(`${synced} saved score${synced===1?'':'s'} synced globally.`,'success');
@@ -180,7 +194,7 @@ async function saveScore(){
   const local=getLocalScores();local.push(entry);local.sort((a,b)=>b.score-a.score||new Date(a.playedAt)-new Date(b.playedAt));setLocalScores(local);updateBest();
   els.saveStatus.textContent='Saving score…';
   try{
-    await submitScore(entry);entry.synced=true;setLocalScores(local);els.saveStatus.textContent='Score saved to the global leaderboard.';showBadge('High score saved globally.','success');
+    const result=await submitScore(entry);entry.synced=true;setLocalScores(local);if(!result?.duplicate)await notifyIfNewLeader(entry);els.saveStatus.textContent='Score saved to the global leaderboard.';showBadge('High score saved globally.','success');
   }catch(error){els.saveStatus.textContent=navigator.onLine?'Saved on this device. Global leaderboard save failed. Tap the leaderboard later to retry.':'Saved on this device. It will sync when you reconnect.';showBadge(error?.message||'Leaderboard unavailable','offline')}
 }
 

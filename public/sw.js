@@ -1,7 +1,7 @@
-const CACHE = 'ball-kho-gayi-xi-v13-auto-update';
+const CACHE = 'ball-kho-gayi-xi-v15-button-reliability';
 const ASSETS = [
   './','./index.html','./styles.css','./css/tokens.css','./css/app-shell.css','./css/screens/home.css','./css/screens/matches.css','./css/final.css',
-  './js/router.js','./js/final-ui.js','./js/production-ux.js','./app.js','./manifest.json','./game.html','./game.css','./game.js',
+  './js/router.js','./js/final-ui.js','./js/production-ux.js','./js/button-reliability.js','./app.js','./manifest.json','./game.html','./game.css','./game.js',
   './assets/cric-time-front.jpg','./assets/ball-kho-gayi-circle.png','./assets/logo-64.png','./assets/logo-192.png','./assets/logo-512.png','./assets/Ball-Kho-Gayi-XI-Player-Guide.pdf',
   './assets/ui-icons/dashboard.png','./assets/ui-icons/matches.png','./assets/ui-icons/squad.png','./assets/ui-icons/link.png','./assets/ui-icons/profile.png',
   './assets/ui-icons/live.png','./assets/ui-icons/trophy.png','./assets/ui-icons/team.png','./assets/ui-icons/players.png','./assets/ui-icons/settings.png',

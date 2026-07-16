@@ -98,19 +98,52 @@
   profileForm?.addEventListener('input', () => { profileForm.dataset.dirty = 'true'; });
   profileForm?.addEventListener('change', () => { profileForm.dataset.dirty = 'true'; });
   $('profileJersey')?.addEventListener('input', validateJersey);
-  $('profilePhoto')?.addEventListener('change', (event) => {
-    const file = event.target.files?.[0];
+
+  async function prepareSelectedProfilePhoto(file) {
     const preview = $('profilePhotoPreview');
-    if (!file || !preview) return;
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    previewUrl = URL.createObjectURL(file);
-    preview.innerHTML = `<img src="${previewUrl}" alt="New profile photo preview">`;
+    const status = $('profilePhotoStatus');
+    const editor = document.querySelector('.profile-photo-editor');
+    if (!file || !preview || !profileForm) return;
+    status.textContent = 'Preparing photo…'; status.className = '';
+    editor?.classList.add('is-processing');
+    try {
+      const compressed = await app.prepareProfileImage(file);
+      profileForm._photoData = compressed;
+      profileForm._photoRemoved = false;
+      preview.innerHTML = `<img src="${compressed}" alt="New profile photo preview">`;
+      profileForm.dataset.dirty = 'true';
+      status.textContent = 'Photo ready. Tap Save changes to upload it.';
+      status.className = 'success';
+    } catch (error) {
+      profileForm._photoData = '';
+      status.textContent = error?.message || 'This photo could not be prepared.';
+      status.className = 'error';
+      app.toast(status.textContent);
+    } finally {
+      editor?.classList.remove('is-processing');
+    }
+  }
+
+  $('profilePhotoChooseBtn')?.addEventListener('click', () => { const input=$('profilePhoto'); if(input){input.value='';input.click();} });
+  $('profileCameraBtn')?.addEventListener('click', () => { const input=$('profileCamera'); if(input){input.value='';input.click();} });
+  $('profilePhoto')?.addEventListener('change', (event) => prepareSelectedProfilePhoto(event.target.files?.[0]));
+  $('profileCamera')?.addEventListener('change', (event) => prepareSelectedProfilePhoto(event.target.files?.[0]));
+  $('profilePhotoRemoveBtn')?.addEventListener('click', () => {
+    const player = app.getSessionPlayer?.();
+    if (!profileForm || !player) return;
+    profileForm._photoData = '';
+    profileForm._photoRemoved = true;
     profileForm.dataset.dirty = 'true';
+    if ($('profilePhoto')) $('profilePhoto').value = '';
+    if ($('profileCamera')) $('profileCamera').value = '';
+    $('profilePhotoPreview').innerHTML = `<span>${app.initials(player.name)}</span>`;
+    const status = $('profilePhotoStatus');
+    if (status) { status.textContent = 'Photo will be removed after you tap Save changes.'; status.className = 'success'; }
   });
 
   function requestProfileClose() {
     if (profileForm?.dataset.dirty === 'true' && !window.confirm('Discard your unsaved profile changes?')) return false;
-    if (profileForm) profileForm.dataset.dirty = 'false';
+    if (profileForm) { profileForm.dataset.dirty = 'false'; profileForm._photoData = ''; profileForm._photoRemoved = false; }
     if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = ''; }
     app.closeModal('profileModal');
     return true;

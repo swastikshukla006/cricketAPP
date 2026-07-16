@@ -1,3 +1,5 @@
+**Current release: v14 — player photo upload and complete notification coverage.**
+
 # Ball Kho Gayi XI — Production Release v7.0
 
 A mobile-first cricket team application using vanilla HTML/CSS/JavaScript, Vercel Functions and MongoDB Atlas.
