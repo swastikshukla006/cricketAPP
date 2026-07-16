@@ -52,13 +52,14 @@
     joinRequests: [],
     chat: [{ id: 'chat-welcome', senderId: 'p6', senderName: 'Swastik', senderRole: 'Captain', text: 'Welcome to the Ball Kho Gayi XI dressing room chat.', createdAt: new Date().toISOString() }],
     practiceTeams: { nameA: 'Team Green', nameB: 'Team Gold', teamA: [], teamB: [], updatedAt: null },
-    liveScoring: defaultLiveScoring()
+    liveScoring: defaultLiveScoring(),
+    gameScores: []
   };
 
   let data = migrateData(deepClone(seedData));
   let session = null;
   let saveQueue = Promise.resolve();
-  let matchFilter = 'all';
+  let matchFilter = 'Upcoming';
   let statMode = 'runs';
   let confirmAction = null;
   let tossState = { winner: '', result: '', opponent: '' };
@@ -101,6 +102,7 @@
     migrated.chat = Array.isArray(migrated.chat) ? migrated.chat.slice(-100) : deepClone(seedData.chat);
     migrated.practiceTeams = { ...deepClone(seedData.practiceTeams), ...(migrated.practiceTeams || {}) };
     migrated.liveScoring = { ...defaultLiveScoring(), ...(migrated.liveScoring || {}), batting: { ...((migrated.liveScoring || {}).batting || {}) }, deliveries: Array.isArray(migrated.liveScoring?.deliveries) ? migrated.liveScoring.deliveries.slice(-36) : [], history: Array.isArray(migrated.liveScoring?.history) ? migrated.liveScoring.history.slice(-25) : [] };
+    migrated.gameScores = Array.isArray(migrated.gameScores) ? migrated.gameScores.filter((score) => score && Number.isFinite(Number(score.score))).slice(-50) : [];
     if (oldVersion < 3 && migrated.players.some((p) => p.id === 'p5')) migrated.settings.viceCaptainId = 'p5';
     if (oldVersion < 4) migrated.settings.version = 4;
     return migrated;
@@ -332,6 +334,7 @@
   function renderAll() {
     renderBrand(); renderSummary(); renderLeadership(); renderAccount(); renderMatches(); renderLiveScoring(); renderTeams(); renderPractice(); renderChat(); renderToss(); renderStats(); renderAdmin(); renderLoginOptions(); renderPerformanceRows(); renderOpponentOptions(); applyPermissions(); renderPremiumHome();
     window.BKGXIRouter?.refresh({ scroll: false });
+    window.dispatchEvent(new CustomEvent('bkgxi:render', { detail: { reason: 'renderAll' } }));
   }
 
   function renderBrand() {
@@ -341,7 +344,7 @@
     const logo = safeImage(s.logoImage, 'assets/ball-kho-gayi-circle.png'); const hero = safeImage(s.heroImage, 'assets/cric-time-front.jpg');
     ['headerLogo','heroLogo','teamSectionLogo','footerLogo'].forEach((id) => { if ($(id)) $(id).src = logo; }); $('heroImage').src = hero;
     document.title = `${s.groupName} — School Cricket`;
-    ['chatWhatsappLink','thankWhatsappLink'].forEach((id)=>{if($(id))$(id).href=s.whatsappGroupUrl||'#';});
+    ['chatWhatsappLink','thankWhatsappLink','profileWhatsappLink'].forEach((id)=>{if($(id))$(id).href=s.whatsappGroupUrl||'#';});
     const completed = data.matches.filter((m) => m.status === 'Completed'); const wins = completed.filter((m) => m.outcome === 'win').length;
     $('heroPlayers').textContent = activePlayers().length; $('heroMatches').textContent = completed.length; $('heroWins').textContent = wins; $('heroRuns').textContent = completed.reduce((sum,m) => sum + parseScore(m.ourScore), 0);
     const upcoming = getUpcomingMatch(); $('nextMatchTitle').textContent = upcoming ? `${s.groupName} vs ${upcoming.opponent}` : 'No match scheduled'; $('nextMatchMeta').textContent = upcoming ? `${formatDate(upcoming.date)} · ${upcoming.time || 'Time TBA'} · ${upcoming.venue}` : 'Captain or admin can add one';
@@ -357,18 +360,12 @@
 
   function homeActionIcon(name) {
     const icons = {
-      login: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5M15 12H3"/>',
-      matches: '<path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M9 18h6M12 13v5M5 6H3v2a4 4 0 0 0 4 4M19 6h2v2a4 4 0 0 1-4 4"/>',
-      squad: '<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 15a5 5 0 0 1 7 4.5"/>',
-      chat: '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"/><path d="M8 10h8M8 14h5"/>',
-      profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
-      live: '<path d="M8 5v14l11-7-11-7Z"/><circle cx="12" cy="12" r="10"/>',
-      schedule: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M12 14v4M10 16h4"/>',
-      result: '<path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/><path d="m4 6 6-3 6 5 6-4"/>',
-      notice: '<path d="M4 13.5V10l12-5v13L4 13.5Z"/><path d="M7 14v5h4l-1.5-4"/>',
-      admin: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>'
+      login:'mobile-check', matches:'matches', squad:'squad', chat:'link', profile:'profile',
+      live:'live', schedule:'schedule', result:'trophy', notice:'web', admin:'dashboard', game:'game',
+      stats:'stats', practice:'team', toss:'cricket', settings:'settings', players:'players'
     };
-    return `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[name] || icons.matches}</svg>`;
+    const file = icons[name] || 'dashboard';
+    return `<img src="assets/ui-icons/${file}.png" alt="" />`;
   }
 
   function homeActionButton({ action, label, detail, icon, primary = false }) {
@@ -454,7 +451,8 @@
         { action:'login', label:'Log in or join', detail:'Enter your private dressing room', icon:'login', primary:true },
         { action:'matches', label:'Matches', detail:'Fixtures and scorecards', icon:'matches' },
         { action:'squad', label:'Squad', detail:'Players and season stats', icon:'squad' },
-        { action:'chat', label:'Team chat', detail:'Open the dressing room', icon:'chat' }
+        { action:'chat', label:'Team chat', detail:'Open the dressing room', icon:'chat' },
+        { action:'game', label:'Boundary Blitz', detail:'Play the cricket mini-game', icon:'game' }
       ];
       $('homeQuickCaption').textContent = 'Explore the team or enter your player account.';
     } else if (isAdmin()) {
@@ -462,7 +460,8 @@
         { action:'admin', label:'Admin dashboard', detail:'Players, teams and settings', icon:'admin', primary:true },
         { action:'live', label:'Live scoring', detail:'Start or continue an innings', icon:'live' },
         { action:'schedule', label:'Schedule match', detail:'Create the next fixture', icon:'schedule' },
-        { action:'result', label:'Add result', detail:'Upload a completed scorecard', icon:'result' }
+        { action:'result', label:'Add result', detail:'Upload a completed scorecard', icon:'result' },
+        { action:'game', label:'Boundary Blitz', detail:'Team high-score challenge', icon:'game' }
       ];
       $('homeQuickCaption').textContent = 'Administrative and match-day controls.';
     } else if (canManage()) {
@@ -470,7 +469,8 @@
         { action:'live', label:'Live scoring', detail:'Start or continue an innings', icon:'live', primary:true },
         { action:'schedule', label:'Schedule match', detail:'Create the next fixture', icon:'schedule' },
         { action:'result', label:'Add result', detail:'Upload a completed scorecard', icon:'result' },
-        { action:'notice', label:'Announcement', detail:'Update the captain’s board', icon:'notice' }
+        { action:'notice', label:'Announcement', detail:'Update the captain’s board', icon:'notice' },
+        { action:'game', label:'Boundary Blitz', detail:'Team high-score challenge', icon:'game' }
       ];
       $('homeQuickCaption').textContent = 'Leadership controls for the next match.';
     } else {
@@ -478,7 +478,8 @@
         { action:'matches', label:'Matches', detail:'Fixtures and scorecards', icon:'matches', primary:true },
         { action:'squad', label:'Squad', detail:'Player profiles and statistics', icon:'squad' },
         { action:'chat', label:'Team chat', detail:'Message the whole group', icon:'chat' },
-        { action:'profile', label:'My profile', detail:'Stats, goal and availability', icon:'profile' }
+        { action:'profile', label:'My profile', detail:'Stats, goal and availability', icon:'profile' },
+        { action:'game', label:'Boundary Blitz', detail:'Play and set a high score', icon:'game' }
       ];
       $('homeQuickCaption').textContent = 'Your fastest routes around the team app.';
     }
@@ -488,7 +489,7 @@
   function handleHomeAction(action) {
     if (action === 'login') return openModal('loginModal');
     if (action === 'profile') return session ? window.BKGXIRouter?.navigate('profile') : openModal('loginModal');
-    if (['matches','squad','chat','admin'].includes(action)) return window.BKGXIRouter?.navigate(action);
+    if (['matches','squad','chat','admin','game'].includes(action)) return window.BKGXIRouter?.navigate(action);
     if (action === 'live') return canManage() ? openLiveSetup() : window.BKGXIRouter?.navigate('matches');
     if (action === 'schedule') return canManage() ? openModal('scheduleModal') : requireLogin();
     if (action === 'result') return openResultModal();
@@ -546,9 +547,119 @@
     $('captainLeaders').innerHTML=leaders.map(([label,stat,fmt])=>`<div>${avatarHtml(stat?.player)}<div><small>${label}</small><strong>${escapeHtml(stat?.player.name||'—')}</strong></div><b>${stat?fmt(stat):'—'}</b></div>`).join('');
   }
 
+  function matchDateParts(match) {
+    if (!match?.date) return { day:'—', month:'TBA', year:'' };
+    const date = new Date(`${match.date}T12:00:00`);
+    if (Number.isNaN(date.getTime())) return { day:'—', month:'TBA', year:'' };
+    return {
+      day: String(date.getDate()).padStart(2, '0'),
+      month: date.toLocaleDateString('en-IN', { month:'short' }),
+      year: String(date.getFullYear())
+    };
+  }
+
+  function matchAvailabilityText(match) {
+    if (match.status !== 'Upcoming') return '';
+    const player = getSessionPlayer();
+    const availability = data.availability[match.id] || {};
+    if (canManage()) {
+      const replies = Object.values(availability);
+      const available = replies.filter((value) => value === 'Available').length;
+      const pending = Math.max(0, activePlayers().length - replies.length);
+      return `${available} available${pending ? ` · ${pending} awaiting reply` : ' · all replies received'}`;
+    }
+    if (player) {
+      const answer = availability[player.id];
+      return answer ? `Your availability: ${answer}` : 'Your availability has not been set';
+    }
+    return 'Log in to update your availability';
+  }
+
   function renderMatches() {
-    let matches=[...data.matches].sort((a,b)=>a.status!==b.status?(a.status==='Upcoming'?-1:1):new Date(b.date)-new Date(a.date)); if(matchFilter!=='all')matches=matches.filter((m)=>m.status===matchFilter);
-    $('matchGrid').innerHTML=matches.map((match)=>{const completed=match.status==='Completed'; const opponentTeam=data.opponentTeams.find((t)=>t.id===match.opponentTeamId); return `<article class="match-card"><span class="match-status ${completed?'completed':''}">${escapeHtml(match.status)}</span><h3>${escapeHtml(data.settings.groupName)} vs ${escapeHtml(match.opponent)}</h3><p class="match-meta">${formatDate(match.date)}${match.time?` · ${escapeHtml(match.time)}`:''}<br>${escapeHtml(match.venue)} · ${match.overs} overs · ${escapeHtml(match.ballType||'Tennis')} ball${opponentTeam?`<br>${opponentTeam.players.length} opponent players listed`:''}</p><div class="score-strip"><div><small>Our team</small><strong>${completed?escapeHtml(match.ourScore):'—'}</strong></div><b>VS</b><div><small>${escapeHtml(match.opponent)}</small><strong>${completed?escapeHtml(match.opponentScore):'—'}</strong></div></div><p class="result-text">${completed?escapeHtml(match.resultSummary):escapeHtml(match.notes||'Fixture scheduled')}</p><div class="card-actions">${completed?`<button class="card-btn" data-scorecard="${match.id}">Scorecard</button>`:''}${!completed&&canScore()?`<button class="card-btn" data-live-match="${match.id}">Live score</button><button class="card-btn" data-complete-match="${match.id}">Add result</button>`:''}${isAdmin()?`<button class="card-btn danger-text" data-delete-match="${match.id}">Delete</button>`:''}</div></article>`;}).join(''); $('matchEmpty').classList.toggle('hidden',matches.length>0);
+    const allMatches = [...data.matches];
+    const upcomingMatches = allMatches
+      .filter((match) => match.status === 'Upcoming')
+      .sort((a,b) => new Date(`${a.date || '9999-12-31'}T${a.time || '23:59'}`) - new Date(`${b.date || '9999-12-31'}T${b.time || '23:59'}`));
+    const completedMatches = allMatches
+      .filter((match) => match.status === 'Completed')
+      .sort((a,b) => new Date(`${b.date || '1970-01-01'}T${b.time || '00:00'}`) - new Date(`${a.date || '1970-01-01'}T${a.time || '00:00'}`));
+    const wins = completedMatches.filter((match) => match.outcome === 'win').length;
+    const losses = completedMatches.filter((match) => match.outcome === 'loss').length;
+    const ties = completedMatches.filter((match) => match.outcome === 'tie').length;
+    const winRate = completedMatches.length ? Math.round((wins / completedMatches.length) * 100) : 0;
+
+    if ($('matchesRecord')) $('matchesRecord').textContent = `${wins}W · ${losses}L${ties ? ` · ${ties}T` : ''}`;
+    if ($('matchesRecordLabel')) $('matchesRecordLabel').textContent = completedMatches.length ? `${completedMatches.length} completed match${completedMatches.length === 1 ? '' : 'es'} this season` : 'No completed matches yet';
+    if ($('matchesUpcomingCount')) $('matchesUpcomingCount').textContent = upcomingMatches.length;
+    if ($('matchesCompletedCount')) $('matchesCompletedCount').textContent = completedMatches.length;
+    if ($('matchesWinRate')) $('matchesWinRate').textContent = `${winRate}%`;
+    if ($('matchesWinRateLabel')) $('matchesWinRateLabel').textContent = completedMatches.length ? `${wins} win${wins === 1 ? '' : 's'} from ${completedMatches.length}` : 'This season';
+    if ($('matchesUpcomingTabCount')) $('matchesUpcomingTabCount').textContent = upcomingMatches.length;
+    if ($('matchesCompletedTabCount')) $('matchesCompletedTabCount').textContent = completedMatches.length;
+    if ($('matchesAllTabCount')) $('matchesAllTabCount').textContent = allMatches.length;
+    if ($('matchesSubtitle')) $('matchesSubtitle').textContent = allMatches.length ? `${allMatches.length} match${allMatches.length === 1 ? '' : 'es'} recorded for ${data.settings.groupName}.` : `Fixtures and scorecards for ${data.settings.groupName}.`;
+
+    $$('[data-match-filter]').forEach((button) => {
+      const active = button.dataset.matchFilter === matchFilter;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', String(active));
+    });
+
+    let matches;
+    if (matchFilter === 'Upcoming') matches = upcomingMatches;
+    else if (matchFilter === 'Completed') matches = completedMatches;
+    else matches = [...upcomingMatches, ...completedMatches];
+
+    const caption = matchFilter === 'Upcoming'
+      ? 'Upcoming fixtures, ordered by match time.'
+      : matchFilter === 'Completed'
+        ? 'Latest completed scorecards first.'
+        : 'Every fixture and result in one place.';
+    if ($('matchesFilterCaption')) $('matchesFilterCaption').textContent = caption;
+
+    $('matchGrid').innerHTML = matches.map((match) => {
+      const completed = match.status === 'Completed';
+      const date = matchDateParts(match);
+      const opponentTeam = data.opponentTeams.find((team) => team.id === match.opponentTeamId);
+      const availabilityText = matchAvailabilityText(match);
+      const actions = [
+        `<button class="match-card-action ${completed ? 'primary' : ''}" type="button" data-scorecard="${escapeHtml(match.id)}">${completed ? 'View scorecard' : 'View details'}</button>`,
+        !completed && canScore() ? `<button class="match-card-action primary" type="button" data-live-match="${escapeHtml(match.id)}">Open live scorer</button>` : '',
+        !completed && canScore() ? `<button class="match-card-action" type="button" data-complete-match="${escapeHtml(match.id)}">Add result</button>` : '',
+        isAdmin() ? `<button class="match-card-action danger" type="button" data-delete-match="${escapeHtml(match.id)}">Delete</button>` : ''
+      ].filter(Boolean).join('');
+      const scorePanel = completed ? `<div class="match-score-panel"><div><small>${escapeHtml(data.settings.groupName)}</small><strong>${escapeHtml(match.ourScore || '—')}</strong></div><b>FINAL</b><div><small>${escapeHtml(match.opponent)}</small><strong>${escapeHtml(match.opponentScore || '—')}</strong></div></div>` : '';
+      const result = completed ? `<p class="match-card-result">${escapeHtml(match.resultSummary || 'Match completed')}</p>` : '';
+      const note = escapeHtml(match.notes || (completed ? 'Scorecard saved.' : 'Fixture scheduled.'));
+      return `<article class="match-list-card ${completed ? 'is-completed' : 'is-upcoming'}" data-match-detail="${escapeHtml(match.id)}" aria-label="${escapeHtml(data.settings.groupName)} versus ${escapeHtml(match.opponent)}">
+        <div class="match-card-date"><span>${escapeHtml(date.month)}</span><strong>${escapeHtml(date.day)}</strong><small>${escapeHtml(date.year)}</small></div>
+        <div class="match-card-body">
+          <div class="match-card-topline"><span class="match-card-status ${completed ? 'completed' : ''}">${completed ? 'Completed' : 'Upcoming'}</span><span class="match-card-type">${Number(match.overs || 0)} overs</span></div>
+          <div class="match-versus">
+            <div class="match-team"><span class="match-team-badge">${escapeHtml(initials(data.settings.groupName))}</span><div><small>Our team</small><strong>${escapeHtml(data.settings.groupName)}</strong></div></div>
+            <span class="match-vs">VS</span>
+            <div class="match-team away"><div><small>Opponent</small><strong>${escapeHtml(match.opponent)}</strong></div><span class="match-team-badge">${escapeHtml(initials(match.opponent))}</span></div>
+          </div>
+          ${scorePanel}
+          <div class="match-card-meta"><span>⌚ ${escapeHtml(match.time || 'Time TBA')}</span><span>⌖ ${escapeHtml(match.venue || 'Venue TBA')}</span><span>● ${escapeHtml(match.ballType || 'Tennis')} ball</span>${opponentTeam ? `<span>♟ ${opponentTeam.players.length} listed players</span>` : ''}</div>
+          ${result}
+          <p class="match-card-note">${note}</p>
+          ${availabilityText ? `<p class="match-card-availability">${escapeHtml(availabilityText)}</p>` : ''}
+          ${actions ? `<div class="match-card-actions">${actions}</div>` : ''}
+        </div>
+      </article>`;
+    }).join('');
+
+    const empty = matches.length === 0;
+    $('matchEmpty').classList.toggle('hidden', !empty);
+    if (empty && $('matchesEmptyTitle')) {
+      $('matchesEmptyTitle').textContent = matchFilter === 'Completed' ? 'No completed scorecards' : matchFilter === 'all' ? 'No matches recorded' : 'No upcoming fixtures';
+      $('matchesEmptyCopy').textContent = matchFilter === 'Completed'
+        ? 'Completed matches will appear here after leadership saves a result.'
+        : matchFilter === 'all'
+          ? 'Schedule the first fixture to begin the season record.'
+          : canManage() ? 'Use Schedule Match when the team is ready for its next fixture.' : 'Leadership will add the next fixture when it is confirmed.';
+    }
   }
 
   function liveBatter(name) {
@@ -602,7 +713,7 @@
   }
 
   function playerCard(player, stat) {
-    return `<article class="player-card"><span class="jersey">${escapeHtml(player.jersey)}</span>${avatarHtml(player)}<h3>${escapeHtml(player.name)}</h3><p>${escapeHtml(leadershipLabel(player.id))}</p><p>${stat?.runs||0} runs · ${stat?.wickets||0} wickets</p><div class="player-card-footer"><button data-player-detail="${player.id}">Profile</button>${isAdmin()?`<button data-edit-player="${player.id}">Edit</button>`:''}</div></article>`;
+    return `<article class="premium-player-card" data-player-name="${escapeHtml(player.name.toLowerCase())}" data-player-role="${escapeHtml(player.role)}"><div class="player-card-top">${avatarHtml(player)}<span class="jersey">#${escapeHtml(player.jersey)}</span></div><h3>${escapeHtml(player.name)}</h3><p class="player-role">${escapeHtml(leadershipLabel(player.id))}</p><p class="player-meta">${escapeHtml(player.role)} · ${escapeHtml(player.className || 'School Squad')}</p><div class="player-mini-stats"><span><b>${stat?.matches||0}</b><small>Matches</small></span><span><b>${stat?.runs||0}</b><small>Runs</small></span><span><b>${stat?.wickets||0}</b><small>Wickets</small></span></div><div class="player-card-footer"><button data-player-detail="${player.id}">View profile</button>${isAdmin()?`<button data-edit-player="${player.id}">Edit</button>`:''}</div></article>`;
   }
 
   function renderPractice() {
@@ -696,11 +807,52 @@
   function openResultModal(matchId='') { if(!canManage())return requireLogin('Admin, captain or vice-captain login required.'); $('resultForm').reset(); $('resultForm').dataset.matchId=matchId; $('resultDate').value=toDateInput(new Date()); $('resultOvers').value=10; renderPerformanceRows(); if(matchId){const m=data.matches.find((x)=>x.id===matchId);if(m){$('resultOpponent').value=m.opponent;$('resultDate').value=m.date;$('resultVenue').value=m.venue;$('resultOvers').value=m.overs;}} openModal('resultModal'); }
   function collectPerformances(){return $$('[data-performance-player]').map((row)=>{const r={playerId:row.dataset.performancePlayer};$$('[data-field]',row).forEach((input)=>r[input.dataset.field]=Number(input.value||0));return r;}).filter((p)=>['runs','balls','wickets','oversBowled','runsConceded','catches'].some((key)=>Number(p[key])>0));}
 
-  function openScorecard(matchId){const match=data.matches.find((m)=>m.id===matchId);if(!match)return;const performances=(match.performances||[]).map((p)=>({...p,player:data.players.find((x)=>x.id===p.playerId)})).filter((p)=>p.player);$('scorecardContent').innerHTML=`<div class="scorecard-hero"><p class="eyebrow">Match Scorecard</p><h2>${escapeHtml(data.settings.groupName)} vs ${escapeHtml(match.opponent)}</h2><p>${formatDate(match.date)} · ${escapeHtml(match.venue)} · ${match.overs} overs</p><div class="scorecard-score"><div><small>${escapeHtml(data.settings.groupName)}</small><strong>${escapeHtml(match.ourScore)}</strong></div><div><small>${escapeHtml(match.opponent)}</small><strong>${escapeHtml(match.opponentScore)}</strong></div></div><p><strong>${escapeHtml(match.resultSummary)}</strong></p></div><div class="table-wrap"><table><thead><tr><th>Player</th><th>Runs</th><th>Balls</th><th>Wickets</th><th>Overs</th><th>Catches</th></tr></thead><tbody>${performances.length?performances.map((p)=>`<tr><td>${escapeHtml(p.player.name)}</td><td>${p.runs||0}</td><td>${p.balls||0}</td><td>${p.wickets||0}</td><td>${p.oversBowled||0}</td><td>${p.catches||0}</td></tr>`).join(''):'<tr><td colspan="6">No player data entered.</td></tr>'}</tbody></table></div>`;openModal('scorecardModal');}
+  function openScorecard(matchId){ if(!data.matches.some((match)=>match.id===matchId)) return; window.BKGXIRouter?.navigate('match', matchId); }
 
-  function openPlayerDetail(id){const p=data.players.find((x)=>x.id===id);if(!p)return;const stat=calculatePlayerStats().find((s)=>s.player.id===id)||{matches:0,runs:0,wickets:0,catches:0,strikeRate:0,economy:0,ballsBowled:0};$('scorecardContent').innerHTML=`<div class="detail-layout">${avatarHtml(p,'large')}<div><p class="eyebrow">${escapeHtml(leadershipLabel(p.id))}</p><h2>${escapeHtml(p.name)}</h2><p class="muted">Jersey ${p.jersey} · ${escapeHtml(p.role)} · ${escapeHtml(p.className||'School Squad')}</p><p>${escapeHtml(p.note||'No note added.')}</p><p><strong>Phone:</strong> ${escapeHtml(displayPhone(p)||'Not added')}</p></div></div><div class="detail-stats"><div><b>${stat.matches}</b><span>Matches</span></div><div><b>${stat.runs}</b><span>Runs</span></div><div><b>${stat.wickets}</b><span>Wickets</span></div><div><b>${stat.catches}</b><span>Catches</span></div><div><b>${stat.strikeRate.toFixed(1)}</b><span>Strike rate</span></div><div><b>${stat.ballsBowled?stat.economy.toFixed(2):'—'}</b><span>Economy</span></div></div>`;openModal('scorecardModal');}
+  function openPlayerDetail(id){ if(!data.players.some((player)=>player.id===id)) return; window.BKGXIRouter?.navigate('player', id); }
 
   function shufflePracticeTeams(){if(!canManage())return requireLogin();const players=[...activePlayers()].sort(()=>Math.random()-.5);const a=[],b=[];players.forEach((p,i)=>(i%2?a:b).push(p.id));data.practiceTeams={...data.practiceTeams,teamA:a,teamB:b,updatedAt:new Date().toISOString()};saveData();renderPractice();toast('Practice teams distributed');}
+
+  window.BKGXIApp = {
+    getData: () => data,
+    getSession: () => session,
+    getSessionPlayer,
+    isAdmin,
+    isCaptain,
+    isViceCaptain,
+    canManage,
+    canScore,
+    activePlayers,
+    calculatePlayerStats,
+    leadershipLabel,
+    displayPhone,
+    formatDate,
+    formatTime,
+    initials,
+    escapeHtml,
+    safeImage,
+    saveData,
+    renderAll,
+    renderMatches,
+    renderTeams,
+    renderStats,
+    renderChat,
+    renderAdmin,
+    openModal,
+    closeModal,
+    openProfileModal,
+    openPlayerModal,
+    openOpponentTeamModal,
+    openOpponentPlayerModal,
+    openResultModal,
+    openLiveSetup,
+    toggleTheme,
+    togglePushNotifications,
+    sendTestNotification,
+    toast,
+    askConfirm,
+    uid
+  };
 
   function bindEvents() {
     const openProfileRoute = () => session ? window.BKGXIRouter?.navigate('profile') : openModal('loginModal');
@@ -727,7 +879,7 @@
     $$('[data-live-ball]').forEach((b)=>b.addEventListener('click',()=>recordLiveBall(b.dataset.liveBall,b.dataset.value)));
     $('scheduleForm').addEventListener('submit',(e)=>{e.preventDefault();if(!canManage())return requireLogin();const teamId=$('scheduleOpponentTeam').value;const team=data.opponentTeams.find((t)=>t.id===teamId);const opponent=team?.name||$('scheduleOpponent').value.trim();if(!opponent)return toast('Choose or enter an opponent');data.matches.push({id:uid('match'),status:'Upcoming',opponent,opponentTeamId:teamId,venue:$('scheduleVenue').value.trim(),date:$('scheduleDate').value,time:$('scheduleTime').value,overs:Number($('scheduleOvers').value),ballType:$('scheduleBall').value,notes:$('scheduleNotes').value.trim(),createdAt:Date.now()});saveData();sendPushNotification({title:'New Match Scheduled',body:`${data.settings.groupName} vs ${opponent} · ${formatDate($('scheduleDate').value)} at ${$('scheduleTime').value || 'time TBA'}`,url:'/#matches',tag:'match-scheduled',type:'match'});e.target.reset();closeModal('scheduleModal');renderAll();toast('Fixture scheduled');});
     $('resultForm').addEventListener('submit',(e)=>{e.preventDefault();if(!canManage())return requireLogin();const existingId=e.target.dataset.matchId;const old=data.matches.find((m)=>m.id===existingId);const match={id:existingId||uid('match'),status:'Completed',opponent:$('resultOpponent').value.trim(),opponentTeamId:old?.opponentTeamId||'',date:$('resultDate').value,venue:$('resultVenue').value.trim(),time:old?.time||'',overs:Number($('resultOvers').value),ballType:old?.ballType||'Tennis',ourScore:$('ourScore').value.trim(),opponentScore:$('opponentScore').value.trim(),tossWinner:$('resultTossWinner').value,tossDecision:$('resultTossDecision').value,outcome:$('resultOutcome').value,resultSummary:$('resultSummary').value.trim(),notes:$('resultNotes').value.trim(),performances:collectPerformances(),createdAt:Date.now()};data.matches=existingId?data.matches.map((m)=>m.id===existingId?match:m):[...data.matches,match];saveData();sendPushNotification({title:'Match Result Added',body:`${data.settings.groupName} ${match.ourScore} · ${match.resultSummary}`,url:'/#matches',tag:'match-result',type:'match'});closeModal('resultModal');renderAll();toast('Match saved and stats updated');});
-    $$('[data-match-filter]').forEach((b)=>b.addEventListener('click',()=>{matchFilter=b.dataset.matchFilter;$$('[data-match-filter]').forEach((x)=>x.classList.toggle('active',x===b));renderMatches();}));
+    $$('[data-match-filter]').forEach((button)=>button.addEventListener('click',()=>{matchFilter=button.dataset.matchFilter;renderMatches();}));
 
     $('addPlayerBtn').addEventListener('click',()=>openPlayerModal()); $('playerForm').addEventListener('submit',async(e)=>{e.preventDefault();if(!isAdmin())return requireLogin();const id=$('editingPlayerId').value,existing=data.players.find((p)=>p.id===id),jersey=Number($('playerJersey').value),phone=$('playerPhone').value.trim(),newPin=$('playerPin').value.trim();if(!jerseyAvailable(jersey,id))return toast('That jersey number is already used');if(phone&&!validPhone(phone))return toast('Enter a valid phone number');if(newPin&&!validPin(newPin))return toast('PIN must contain 4–6 numbers');let photo=existing?.photo||'';try{if($('playerPhoto').files[0])photo=await readCompressedImage($('playerPhoto').files[0]);}catch(err){return toast(err.message);}const p={id:id||uid('player'),name:$('playerName').value.trim(),phone,jersey,role:$('playerRole').value,className:$('playerClass').value.trim()||'School Squad',pinHash:newPin?await hashPin(newPin):(existing?.pinHash||DEFAULT_PLAYER_PIN_HASH),battingStyle:$('playerBatting').value.trim()||'Right-hand bat',bowlingStyle:$('playerBowling').value.trim()||'Does not bowl',note:$('playerNote').value.trim(),photo,status:'active'};data.players=id?data.players.map((x)=>x.id===id?p:x):[...data.players,p];saveData();closeModal('playerModal');renderAll();toast(id?'Player updated':'Player added');});
 

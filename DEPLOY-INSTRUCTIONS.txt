@@ -1,0 +1,20 @@
+BALL KHO GAYI XI — FINAL DEPLOYMENT
+
+1. Extract this ZIP into your GitHub project folder and allow files to be replaced.
+2. Keep your existing Vercel environment variables:
+   MONGODB_URI
+   MONGODB_DB
+   VAPID_PUBLIC_KEY
+   VAPID_PRIVATE_KEY
+   VAPID_SUBJECT
+3. Run from the project folder:
+
+   git add -A
+   git commit -m "Release final Ball Kho Gayi XI app"
+   git push
+
+4. Wait until the new Vercel deployment shows READY.
+5. Open the site once in Chrome, then close and reopen the Android app.
+6. Test Home, Matches, Squad, Chat, Profile, Admin and Boundary Blitz.
+
+Do not upload any private VAPID setup file or .env file to GitHub.
